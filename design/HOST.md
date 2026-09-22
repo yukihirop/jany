@@ -46,9 +46,19 @@ jind 0.1.0 を `design/find/`、jurl 0.1.2 を `design/curl/` の 3 ファイル
 - **jurl の出力側は jx に持ち込まない** (決定 2026-09-22): `-w` のステータス行、TTY のときの `-i` + ヘッダ / JSON の色付け (`output::print_response`)。整形は `| jq`
 - **jx は実行しない** (決定 2026-09-22、ユーザー): 未知のコマンドを扱うので、Y のあとに spawn するのではなくシェルの入力行に置いて Enter は人が押す。これで `-y` / `confirm_below` / `e` が消え、`postprocess = "count_lines"` は `pipe = ["wc", "-l"]` に変わった。preview (find delete) だけ read-only の実行として残す
 
+## docker run を書いて分かったこと (2026-09-22、`/jx-register` の手順で書いた最初の定義)
+
+- 役割 22、うち jev に見せるのは 7 (image / cmd / container_name / memory / cpus / flag / noise)。規則 30 本、質問 1 (flag_typo)、repair 2 (attach_unit / claim)。cases 16 本 (規則だけ 10、jev 6)
+- `-p 8080:80` `--name web` `named web` `workdir /app` のような「マーカー + 値」は全部 `next` で書けた。claim が要ったのは「2 cpus」(値が先) だけ
+- ホストに足したもの 1 つ: **`next` の役割に table があれば補正値を引く** (`restart always` → always、`platform arm64` → linux/arm64)。それまで `next` は fixed を書かないと語そのままだった
+- 規則が当たらない語は amount を持たないので、裸の数 (`2 cpus` の 2) を jev が `cpus` と言っても組み立てられず 0.3 に落ちた。`match = { builtin = "amount" }, role = "unresolved"` を最後に置いて n を持たせる。reference.md に書いた
+- 秘密: `KEY=value` は規則で決まっても state.tokens として jev に送られる。`env` に `mask = "<env>"` を付けた。**規則で決まる語も jev に見える**ことは reference.md の mask の説明に足すべき (curl の header と同じ)
+- jev の弱さ: "temporarily" を flag 0.70 と言い typo 補正で 0.36 まで落ちた。表に "temporarily" を足して規則で決めた。"app" は container_name 0.35 / cmd 0.32 で割れる (どちらも自然なので当然)
+- `--` の後ろはコンテナ内コマンドにした (docker run のオプションではない)。`-x` の生フラグは passthrough 役割で image の前に置く。jx の passthrough の意味はコマンドごとに assemble.sh が決めてよい
+
 ## まだ確かめていないこと
 
 - jev の Choice に `by_dimension` のような疑似 role を見せない工夫 (find schema では `role = "by_dimension"` と書いたが、jev には time_amount / size_amount しか見せない)
 - 表 (`[tables.*]`) の大文字小文字。curl は区別しない前提で書いた (`POST` も `post` も当たる)。find の jind がどうしていたかは見ていない
 - `regex` は Rust の regex crate 前提 (先読み無し)。`(?i)` は先頭に置いた (Python の re でも通る形)
-- 3 つ目 (docker run / sql) で `next` `once` `pair` で足りるか
+- ~~3 つ目 (docker run / sql) で `next` `once` `pair` で足りるか~~ docker run は `next` + claim 1 本で足りた (上)。sql は未着手

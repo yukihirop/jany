@@ -7,7 +7,9 @@ jind(jev × find、`../jind`)と jurl(jev × curl、`../jurl`)を汎化した 1 
 - **Rust ホストが動く**(2026-09-22)。`src/` 16 ファイル。`JX_CMD_DIR=design cargo run -- test find` 8/8、`test curl` 30/30。実機で jev を呼んで `find empty folders depth 2 count` → `find . -maxdepth 2 -type d -empty | wc -l` が stdout に出ることを確認。リモート無し
 - `src/` の由来: `jev/{mod,client}.rs` `color.rs` `setup.rs` `config.rs` は jind からほぼコピー。`rules.rs` `questions.rs` `repair.rs` `amount.rs` `schema.rs` `assemble.rs` `interpret.rs` `testrun.rs` `init.rs` は schema 駆動で書き直したもの。jind/jurl は参考であって依存ではない
 - `jx init zsh` はゼロ引数の zsh で eval して関数が定義されるところまで確認。**対話シェルで `print -z` が入力行に載るところは未確認**。bash の `\e[5n` トリックは `bash -n` で構文だけ確認、fish は手元に無く未確認
-- 未実装: `jx register`、`/jx-register` スキル、`jx test` の `--explain` 以外の詳細表示。clippy の style 警告 2 件(needless_range_loop / contains_key+insert)は放置
+- **`/jx-register` スキルと `jx register`**(2026-09-22): スキル本体は `skill/jx-register/{SKILL.md, reference.md, template/}` にあり、`include_str!` でバイナリに埋め込む(examples は `design/find` `design/curl` そのもの)。`jx init <shell>` がラッパーを stdout に出すついでに `~/.agents/skills/jx-register/` に書き(`JX_SKILL_DIR` で変更可、中身が同じなら何もしない)、`~/.claude/skills/` `~/.codex/skills/` が既にあってその名前が無ければ symlink を置く。**Codex が `~/.agents/skills` を読むかは確かめていない**(symlink はそのための保険)。`jx register <name> [sub]` は雛形 3 ファイルを置くだけ(既存があれば止まる)
+- **`design/docker/run/`**(2026-09-22): スキルの手順で書いた 3 つ目の定義。cases 16/16。書いて分かったことは `design/HOST.md`「docker run を書いて分かったこと」(ホストに足したのは `next` の table 補正 1 つ)
+- clippy の style 警告 2 件(needless_range_loop / contains_key+insert)は放置。`src/` は 18 ファイル
 - 2026-09-22 に `~/JavaScriptProjects/jx` から `~/RustProjects/jx` へ移動した(ホストを Rust にすると決めたため)
 - `design/find/` は jind 0.1.0 を定義ファイル 3 つに書き直したもの。`assemble.sh` は実際に動かして jind の README の例 6 本 + 衝突 1 本で同じ argv が出ることを確認済み
 - `design/curl/` は jurl 0.1.2 を同じ 3 つに書き直したもの(2026-09-22)。`assemble.sh` は jurl の `-n --no-jev` 実出力 16 本 + interpret.rs / EXAMPLES の jev 例 7 本で同じ argv。規則は Python で最小エンジンを書いて `jurl --explain` の role 列と 18 本一致(scratch、リポジトリには入れていない)。DSL に足したものは `design/HOST.md`「curl を書いて分かったこと」
@@ -44,10 +46,12 @@ jind(jev × find、`../jind`)と jurl(jev × curl、`../jurl`)を汎化した 1 
 2. ~~jurl の出力側を jx に持ち込むか~~ 決定(2026-09-22、ユーザー): **持ち込まない**。jx curl は curl の argv を作って実行し stdout をそのまま出す。整形は `| jq`。jurl 本体は残るので機能が消えるわけではない
 3. ~~Rust ホストを書く~~ 済(2026-09-22)。find 8 + curl 30 の cases が通る。直したこと: cases が chdir するので `Schema.dir` は canonicalize、サブコマンド解決は `/` や `.` を含む語で止める(`jx find /var/log …` が `design/find//var/log` を探しに行った)、find の cases 2 本を直した(delete に `risk`/`preview` が無かった、"mp4" は英字だけでないので typo 質問は聞かれない = jind `prompt.rs:93` と同じ)
 4. `jx init zsh` を対話シェルで試す(`eval "$(jx init zsh)"` を .zshrc に入れて `jx find …` → 入力行に載るか)
-5. `/jx-register` スキルを書き、docker run で LLM 生成を試す。`jx register <name>` は雛形(schema.toml / assemble.sh / cases.toml)を置くだけの薄いコマンドにする想定(未着手)
+5. ~~`/jx-register` スキルを書き、docker run で試す~~ 済(2026-09-22)。ただし試したのは「Claude Code がスキルの手順に沿って自分で書く」であって、`/jx-register docker run` をスキルとして呼んだわけではない。**未検証: 実際に `jx init zsh` を本物の HOME で実行してスキルが Claude Code / Codex に見えるか、`/jx-register <name>` で一発で通る定義が出るか**
+6. `jx init zsh` を本物の HOME で実行(`~/.agents/skills/jx-register` と `~/.claude/skills` `~/.codex/skills` への symlink ができる)→ 新しい Claude Code セッションで `/jx-register` が一覧に出るか → 4 つ目のコマンド(ユーザーがよく打つもの)で `/jx-register` を本当に呼んで試す
 
 ## 分かっていること・注意
 
+- 規則で決まった語も jev の state.tokens に入る。秘密を含みうる役割(curl の header、docker の env)には `mask` を付ける
 - `jx test` の Mock は「cases に書いた答えのうち jx が聞かなかったキーがあれば失敗」にしてある。質問の when とフィクスチャのずれに気づくため。逆に聞かれたのに答えが無いキーは未回答のまま(未解決になれば error で落ちる)
 - jq の `//` は `false` を「無い」扱いにする。`assemble.sh` の初版で `within an hour` が `-mmin +60` になった(正しくは `-60`)。**LLM が書く assemble.sh は cases.toml 無しで信用しない**
 - assemble の契約は curl で変えた: `dangerous: bool` → `risk: "none"|"unsafe"|"dangerous"`、`defaults: [...]` → `defaults: {args, ...}`、stdin に `answers`(command scope の質問の答え)を追加。find の 3 ファイルも合わせて直してある

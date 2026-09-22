@@ -1,0 +1,334 @@
+# jx schema: docker run (3 つ目のコマンド。/jx-register の手順で書いた最初の定義。2026-09-22)
+#
+# 載せたもの: image / command、-d --rm -it --privileged --read-only、--name、-p、-v、-e、--env-file、
+#   --network、-w、-u、-m、--cpus、--restart、--platform。`--` の後ろはコンテナ内コマンド。
+# 載せないもの: --add-host --label --hostname --entrypoint --pull など (`-x` の生フラグは passthrough で素通し)。
+
+[command]
+name = "docker run"
+description = """docker run: turns loosely ordered words into one `docker run` command. \
+Words may be out of order or misspelled. A bare word is usually the image (nginx, redis, ubuntu:22.04) \
+or a command to run inside the container (bash, sh, python). Ports look like 8080:80, volumes like ./data:/data, \
+env like KEY=value."""
+example = "nginx 8080:80 background named web"
+
+# ---------------------------------------------------------------------------
+# 役割。jev = "..." のあるものだけ jev に見せる。
+# ---------------------------------------------------------------------------
+[[roles]]
+key = "image"
+jev = "The container image to run (nginx, redis:7, ubuntu, ghcr.io/org/app:1.2)"
+
+[[roles]]
+key = "cmd"
+jev = "A command or argument to run inside the container, after the image (bash, sh, python, app.py, -c)"
+
+[[roles]]
+key = "container_name"
+jev = "A name to give the container (usually after: name, named, called)"
+
+[[roles]]
+key = "memory"
+jev = "A memory limit for the container (512m, 2g, 1024mb)"
+amount = "size"
+
+[[roles]]
+key = "cpus"
+jev = "A number of CPUs for the container (2, 0.5, usually next to: cpus, cores)"
+amount = "count"
+
+[[roles]]
+key = "flag"
+jev = "A word for a docker run switch: detach/background, rm/temporary, interactive/it/shell, privileged, readonly"
+table = "flags"
+
+[[roles]]
+key = "noise"
+jev = "Filler with no meaning (run, container, image, a, the, with, in, using, from, please)"
+
+# 以下は規則でしか付かない (jev に見せない)
+[[roles]]
+key = "port"          # 8080:80 → -p
+[[roles]]
+key = "volume"        # ./data:/data → -v
+[[roles]]
+key = "env"           # KEY=value → -e
+mask = "<env>"        # 値に秘密が入るので jev には見せない
+[[roles]]
+key = "env_file"      # --env-file x
+[[roles]]
+key = "network"       # --network x
+[[roles]]
+key = "workdir"       # -w x
+[[roles]]
+key = "user"          # -u x
+[[roles]]
+key = "restart"       # --restart always
+table = "restarts"
+[[roles]]
+key = "platform"      # --platform linux/arm64
+table = "platforms"
+[[roles]]
+key = "marker"        # name / network / workdir … 次の語の役割を決めるだけの語。argv には出ない
+[[roles]]
+key = "cpus_marker"   # "2 cpus" の cpus。repair.claim で前の数を取る
+[[roles]]
+key = "unit"          # 512 mb の mb
+[[roles]]
+key = "passthrough"   # -x で始まる生フラグ。docker run のオプションとして image の前にそのまま置く
+
+# ---------------------------------------------------------------------------
+# 量。docker は 512m / 2g をそのまま受けるので単位キーは docker の綴りにする。
+# ---------------------------------------------------------------------------
+[amount]
+[amount.units.size]
+b = ["b", "byte", "bytes"]
+k = ["k", "kb", "kib", "K"]
+m = ["m", "mb", "mib", "meg", "megs", "megabyte", "megabytes", "M"]
+g = ["g", "gb", "gib", "gig", "gigs", "gigabyte", "gigabytes", "G"]
+
+[amount.case_sensitive]
+suffixes = ["K", "M", "G"]
+
+# ---------------------------------------------------------------------------
+# 語テーブル
+# ---------------------------------------------------------------------------
+[tables.flags]
+"-d"           = ["-d", "--detach", "d", "detach", "detached", "background", "bg", "daemon", "daemonize"]
+"--rm"         = ["--rm", "rm", "remove", "ephemeral", "temporary", "temporarily", "temp", "throwaway", "oneshot", "disposable"]
+"-it"          = ["-it", "-ti", "it", "interactive", "tty", "shell", "terminal", "attach"]
+"--privileged" = ["--privileged", "privileged"]
+"--read-only"  = ["--read-only", "readonly", "read-only", "ro"]
+"--init"       = ["--init", "init"]
+
+[tables.restarts]
+always          = ["always"]
+unless-stopped  = ["unless-stopped", "unless_stopped", "unlessstopped"]
+on-failure      = ["on-failure", "on_failure", "onfailure"]
+
+[tables.platforms]
+"linux/amd64" = ["amd64", "x86_64", "x64", "linux/amd64", "intel"]
+"linux/arm64" = ["arm64", "aarch64", "linux/arm64", "arm64/v8", "linux/arm64/v8", "apple"]
+
+[tables.name_markers]
+_ = ["name", "named", "called", "--name"]
+
+[tables.network_markers]
+_ = ["network", "net", "--network", "--net"]
+
+[tables.workdir_markers]
+_ = ["workdir", "wd", "cwd", "-w", "--workdir"]
+
+[tables.user_markers]
+_ = ["user", "-u", "--user"]
+
+[tables.memory_markers]
+_ = ["memory", "mem", "ram", "-m", "--memory"]
+
+[tables.cpus_markers]
+_ = ["cpus", "cpu", "cores", "core", "--cpus"]
+
+[tables.port_markers]
+_ = ["port", "ports", "publish", "expose", "-p", "--publish"]
+
+[tables.volume_markers]
+_ = ["volume", "mount", "-v", "--volume"]
+
+[tables.env_markers]
+_ = ["env", "-e", "--env"]
+
+[tables.env_file_markers]
+_ = ["env-file", "envfile", "--env-file"]
+
+[tables.restart_markers]
+_ = ["restart", "--restart"]
+
+[tables.platform_markers]
+_ = ["platform", "arch", "--platform"]
+
+[tables.noise]
+_ = ["run", "start", "container", "image", "a", "an", "the", "with", "in", "on", "using", "from", "please", "and", "to", "as",
+     "docker", "it", "me", "up", "new", "of", "for", "limit", "limited", "mode"]
+
+# ---------------------------------------------------------------------------
+# 規則。上から順、最初に当たったものが勝つ。
+# ---------------------------------------------------------------------------
+# 2 語規則: マーカー + 次の語
+[[rules]]
+match = { table = "name_markers" }
+role  = "marker"
+next  = { role = "container_name" }
+
+[[rules]]
+match = { table = "network_markers" }
+role  = "marker"
+next  = { role = "network" }
+
+[[rules]]
+match = { table = "workdir_markers" }
+role  = "marker"
+next  = { role = "workdir" }
+
+[[rules]]
+match = { table = "user_markers" }
+role  = "marker"
+next  = { role = "user" }
+
+[[rules]]
+match = { table = "port_markers" }
+role  = "marker"
+next  = { role = "port" }
+
+[[rules]]
+match = { table = "volume_markers" }
+role  = "marker"
+next  = { role = "volume" }
+
+[[rules]]
+match = { table = "env_markers" }
+role  = "marker"
+next  = { role = "env" }
+
+[[rules]]
+match = { table = "env_file_markers" }
+role  = "marker"
+next  = { role = "env_file" }
+
+[[rules]]
+match = { table = "restart_markers" }
+role  = "marker"
+next  = { role = "restart" }
+
+[[rules]]
+match = { table = "platform_markers" }
+role  = "marker"
+next  = { role = "platform" }
+
+[[rules]]
+match = { table = "memory_markers" }
+role  = "marker"
+next  = { role = "memory" }
+
+# "2 cpus": 数が先に来る形。cpus は marker、数は repair.claim で拾う (数自体は jev に回る)
+[[rules]]
+match = { table = "cpus_markers" }
+when  = { prev_is_number = true }
+role  = "cpus_marker"
+note  = "cpus after the number"
+
+# "cpus 2": マーカーが先
+[[rules]]
+match = { table = "cpus_markers" }
+role  = "marker"
+next  = { role = "cpus" }
+
+# 形で決まる語
+[[rules]]
+match = { regex = '^([0-9]{1,3}(\.[0-9]{1,3}){3}:)?[0-9]{1,5}(-[0-9]{1,5})?:[0-9]{1,5}(-[0-9]{1,5})?(/(tcp|udp|sctp))?$' }
+role  = "port"
+note  = "host:container"
+
+[[rules]]
+match = { regex = '^[^:=]+:/[^:]*(:(ro|rw|z|Z|cached|delegated|consistent))?$' }
+role  = "volume"
+note  = "src:/dst"
+
+[[rules]]
+match = { regex = '^[A-Za-z_][A-Za-z0-9_]*=.*$' }
+role  = "env"
+
+[[rules]]
+match = { regex = '^([0-9]+(?:\.[0-9]+)?)(?:cpu|cpus|cores?)$' }
+role  = "cpus"
+fixed = "$1"
+note  = "joined cpu count"
+
+# 512m / 2g / 1024MB: 単位付きの量は memory
+[[rules]]
+match = { builtin = "amount" }
+when  = { has_unit = true }
+role  = "memory"
+
+[[rules]]
+match = { builtin = "unit_word" }
+when  = { prev_is_number = true }
+role  = "unit"
+
+[[rules]]
+match = { table = "flags" }
+role  = "flag"
+
+[[rules]]
+match = { table = "restarts" }
+role  = "restart"
+
+[[rules]]
+match = { table = "platforms" }
+role  = "platform"
+
+# レジストリ / タグ / digest 付きの image は形で決まる。裸の nginx は jev
+[[rules]]
+match = { regex = '^([a-z0-9.-]+(:[0-9]+)?/)?[a-z0-9._-]+(/[a-z0-9._-]+)*(:[A-Za-z0-9._-]+|@sha256:[a-f0-9]{64})$' }
+role  = "image"
+once  = true
+note  = "image with tag/registry"
+
+[[rules]]
+match = { regex = '^[a-z0-9.-]+(:[0-9]+)?/[a-z0-9._/-]+$' }
+role  = "image"
+once  = true
+note  = "registry/name"
+
+[[rules]]
+match = { prefix = "-", min_len = 2 }
+role  = "passthrough"
+note  = "raw docker option"
+
+# 裸の数は jev に回すが、amount (n) は持たせておく ("2 cpus" の 2、"512 mb" の 512)
+[[rules]]
+match = { builtin = "amount" }
+role  = "unresolved"
+
+[[rules]]
+match = { table = "noise" }
+role  = "noise"
+
+# ---------------------------------------------------------------------------
+# 質問 (規則で決まらない語だけ。role.i は自動)
+# ---------------------------------------------------------------------------
+[[questions]]
+key  = "flag_typo"
+kind = "choice"
+when = { resolved = false, alphabetic = true, max_len = 20 }
+ask  = "If `tokens[{i}]` (\"{w}\") is a misspelled docker run switch word, which one was intended?"
+choices = "table:flags"
+min_choice_len = 3
+none = "Not a switch word"
+applies_to = "flag"
+none_conf = 0.3
+
+# ---------------------------------------------------------------------------
+# repair
+# ---------------------------------------------------------------------------
+[[repair]]
+op = "attach_unit"                       # "512 mb" → memory に単位を付ける
+unit_role = "unit"
+amount_roles = ["memory"]
+
+[[repair]]
+op = "claim"                             # "2 cpus": marker の前の数を cpus にする
+marker = "cpus_marker"
+role = "cpus"
+side = "before"
+from = ["cpus", "memory", "unresolved"]
+require = { amount_without_unit = true }
+
+[assemble]
+script = "assemble.sh"
+
+[defaults]
+args = []
+
+[confirm]
+preview_readonly = false
+unsafe_note = "--privileged gives the container full access to the host"

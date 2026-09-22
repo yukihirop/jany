@@ -12,6 +12,7 @@ mod repair;
 mod rules;
 mod schema;
 mod setup;
+mod skill;
 mod testrun;
 mod token;
 
@@ -22,7 +23,9 @@ const HELP: &str = "\
 jx — jev x any command. Turn loosely ordered words into a command line.
 
 usage: jx <command> [words ...] [flags] [-- passthrough args]
-       jx init <zsh|bash|fish>     print the shell wrapper (eval \"$(jx init zsh)\")
+       jx init <zsh|bash|fish>     print the shell wrapper (eval \"$(jx init zsh)\");
+                                   also installs the /jx-register skill to ~/.agents/skills
+       jx register <name> [sub]    scaffold ~/.config/jx/cmd/<name>/ (then: /jx-register <name>)
        jx test <command>           run cases.toml of a command definition
        jx setup                    save your OpenRouter API key
        jx list                     show the command definitions found
@@ -41,6 +44,7 @@ env:
   JEV_MODEL            default typesafe/jev-1.13
   JX_CMD_DIR           where command definitions live (default ~/.config/jx/cmd)
   JX_CONFIG_DIR        default ~/.config/jx
+  JX_SKILL_DIR         where `jx init` puts the skill (default ~/.agents/skills/jx-register)
   JX_NO_JEV=1          same as --no-jev
 ";
 
@@ -100,8 +104,18 @@ fn run(args: Vec<String>) -> Result<i32, JxError> {
         "init" => {
             let shell = words.get(1).map(String::as_str).unwrap_or("");
             print!("{}", init::script(shell)?);
+            // スキルも一緒に置く。失敗してもラッパーは出ているので警告だけ。
+            match skill::install() {
+                Ok(changed) => {
+                    for c in changed {
+                        eprintln!("jx: installed {c}");
+                    }
+                }
+                Err(e) => eprintln!("jx: could not install the jx-register skill: {e}"),
+            }
             return Ok(0);
         }
+        "register" => return skill::register(&cmd_dir, &words[1..]),
         "test" => {
             let (schema, used) = schema::resolve(&cmd_dir, &words[1..])?;
             if used != words.len() - 1 {

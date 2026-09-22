@@ -1,0 +1,14 @@
+# jx cases: __NAME__。`jx test __NAME__` が回す。
+# 期待値: argv / preview / risk / pipe / error / confidence / tokens / state / not_asked / setup.dirs / no_jev
+# [case.jev] は jev の答えの Mock。聞かれないキーに答えると失敗する(--explain で何が聞かれるか見る)。
+
+[[case]]
+words = ["-v"]
+argv  = [__ARGV0__, "-v"]
+no_jev = true
+
+# [[case]]
+# words = ["src", "big"]
+# argv  = [__ARGV0__, "src", "--big"]
+# [case.jev]
+# "role.1" = { choice = "option_word", confidence = 0.9 }

@@ -1,0 +1,116 @@
+# jx cases: docker run。`JX_CMD_DIR=design jx test docker run`
+# 規則だけで決まるもの (no_jev) と、jev の答えを Mock で書くもの。答えは実機の jev (typesafe/jev-1.13) で見た値を丸めたもの。
+
+# --- 規則だけ ---------------------------------------------------------------
+
+[[case]]
+words = ["nginx:1.25", "8080:80", "./data:/usr/share/nginx/html", "detach", "named", "web"]
+argv  = ["docker", "run", "-d", "--name", "web", "-p", "8080:80", "-v", "./data:/usr/share/nginx/html", "nginx:1.25"]
+no_jev = true
+
+[[case]]
+words = ["run", "redis:7", "in", "background", "with", "512m", "memory"]
+argv  = ["docker", "run", "-d", "-m", "512m", "redis:7"]
+no_jev = true
+
+[[case]]
+words = ["ubuntu:22.04", "shell"]
+argv  = ["docker", "run", "-it", "ubuntu:22.04"]
+no_jev = true
+
+[[case]]
+words = ["postgres:16", "POSTGRES_PASSWORD=secret", "-p", "5432:5432", "--rm"]
+argv  = ["docker", "run", "--rm", "-p", "5432:5432", "-e", "POSTGRES_PASSWORD=secret", "postgres:16"]
+no_jev = true
+
+[[case]]
+words = ["alpine:3.20", "--rm", "-it"]
+passthrough = ["sh", "-c", "ls /"]
+argv  = ["docker", "run", "--rm", "-it", "alpine:3.20", "sh", "-c", "ls /"]
+no_jev = true
+
+[[case]]
+words = ["ghcr.io/org/app:1.2", "port", "3000", "env-file", ".env", "restart", "always", "platform", "arm64"]
+argv  = ["docker", "run", "-p", "3000:3000", "--env-file", ".env", "--restart", "always", "--platform", "linux/arm64", "ghcr.io/org/app:1.2"]
+no_jev = true
+
+[[case]]
+words = ["mysql:8", "cpus", "1.5", "user", "1000:1000", "network", "backend", "--privileged"]
+argv  = ["docker", "run", "--privileged", "--network", "backend", "-u", "1000:1000", "--cpus", "1.5", "mysql:8"]
+risk = "unsafe"
+no_jev = true
+
+[[case]]
+words = ["nginx:latest", "--pull=always", "-v", "./site:/usr/share/nginx/html:ro"]
+argv  = ["docker", "run", "-v", "./site:/usr/share/nginx/html:ro", "--pull=always", "nginx:latest"]
+no_jev = true
+# ~/site の展開 (assemble.sh の env.HOME) は期待値が環境に依るので cases に書かず、実機で確認した (2026-09-22)
+
+[[case]]
+words = ["8080:80"]
+error = "no image: say which image to run (nginx, redis:7, ubuntu)"
+no_jev = true
+
+# image の規則は once なので 2 つ目は jev に回る。jev も image と言えば assemble が断る
+[[case]]
+words = ["nginx:1", "redis:7"]
+error = "more than one image: nginx:1, redis:7"
+[case.jev]
+"role.1" = { choice = "image", confidence = 0.9 }
+
+# --- jev あり ------------------------------------------------------------------
+
+[[case]]
+words = ["nginx", "8080:80", "background", "named", "web"]
+argv  = ["docker", "run", "-d", "--name", "web", "-p", "8080:80", "nginx"]
+state = { "hints.1" = "port", "hints.2" = "flag" }
+[case.jev]
+"role.0"      = { choice = "image", confidence = 1.0 }
+"flag_typo.0" = { choice = "none" }
+
+[[case]]
+words = ["nginx", "2", "cpus", "1g"]
+argv  = ["docker", "run", "-m", "1g", "--cpus", "2", "nginx"]
+not_asked = ["flag_typo.1"]                       # "2" は英字でないので typo は聞かれない
+[case.jev]
+"role.0"      = { choice = "image", confidence = 1.0 }
+"flag_typo.0" = { choice = "none" }
+"role.1"      = { choice = "cpus", confidence = 0.99 }
+
+[[case]]
+words = ["ubuntu", "512", "mb", "bash"]
+argv  = ["docker", "run", "-m", "512m", "ubuntu", "bash"]
+confidence = 0.97
+[case.jev]
+"role.0"      = { choice = "image", confidence = 1.0 }
+"flag_typo.0" = { choice = "none" }
+"role.1"      = { choice = "memory", confidence = 0.97 }
+"role.3"      = { choice = "cmd", confidence = 1.0 }
+"flag_typo.3" = { choice = "none" }
+
+[[case]]
+words = ["detahc", "nginx"]
+argv  = ["docker", "run", "-d", "nginx"]
+[case.jev]
+"role.0"      = { choice = "flag", confidence = 0.98 }
+"flag_typo.0" = { choice = "detach" }               # 表に無い語 → typo 質問の答えが fixed (-d) になる
+"role.1"      = { choice = "image", confidence = 1.0 }
+"flag_typo.1" = { choice = "none" }
+
+[[case]]
+words = ["python:3.12", "workdir", "/app", "volume", "./src:/app", "python", "main.py"]
+argv  = ["docker", "run", "-v", "./src:/app", "-w", "/app", "python:3.12", "python", "main.py"]
+[case.jev]
+"role.5"      = { choice = "cmd", confidence = 1.0 }
+"flag_typo.5" = { choice = "none" }
+"role.6"      = { choice = "cmd", confidence = 1.0 }
+
+# jev が noise と言った語は捨てる。"tmeporary" は typo 質問で temporary に補正
+[[case]]
+words = ["please", "start", "a", "redis", "container", "tmeporary"]
+argv  = ["docker", "run", "--rm", "redis"]
+[case.jev]
+"role.3"      = { choice = "image", confidence = 0.95 }
+"flag_typo.3" = { choice = "none" }
+"role.5"      = { choice = "flag", confidence = 0.9 }
+"flag_typo.5" = { choice = "temporary" }

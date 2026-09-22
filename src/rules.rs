@@ -28,6 +28,11 @@ pub fn classify(schema: &Schema, words: &[String]) -> Vec<Token> {
                 n.set_rule(&next.role);
                 if let Some(f) = &next.fixed {
                     n.fixed = Some(template(f, nw, None));
+                } else if let Some(table) = schema.role(&next.role).and_then(|r| r.table.as_deref())
+                    && let Some(fixed) = schema.table_lookup(table, nw)
+                {
+                    // 役割に表があれば補正値を引く(restart always → always、arm64 → linux/arm64)。
+                    n.fixed = fixed;
                 }
                 next_tok = Some(n);
             }

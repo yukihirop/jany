@@ -1,0 +1,59 @@
+# jx schema: __NAME__
+# キーの意味は ~/.agents/skills/jx-register/reference.md。実例は examples/find, examples/curl。
+# 未知のキーはエラーになる。
+
+[command]
+name = "__NAME__"
+description = """__NAME__: turns loosely ordered command words into one `__NAME__` command. \
+Words may be misspelled, split, or out of order."""
+example = ""
+
+# 役割。jev = "..." のあるものだけ jev の選択肢になる(英語、具体例つき)。10〜20 個に抑える。
+[[roles]]
+key = "passthrough"
+
+# [[roles]]
+# key = "path"
+# jev = "A file or directory path (src, /var/log, ./a.txt)"
+
+# 語 → 補正値の表。キー "_" は補正なし。大文字小文字は区別しない。
+# [tables.actions]
+# _ = ["ls", "print"]
+
+# 上から順に試し、最初に当たった規則が勝つ。迷わない語は全部ここで決める(jev を呼ばない)。
+[[rules]]
+match = { prefix = "-", min_len = 2 }
+role  = "passthrough"
+note  = "raw flag"
+
+# [[rules]]
+# match = { builtin = "path_like" }
+# role  = "path"
+
+# 規則で決まらない語に jev へ聞くこと。role.i は自動で聞かれる。
+# [[questions]]
+# key  = "typo"
+# kind = "choice"
+# when = { resolved = false, alphabetic = true, max_len = 20 }
+# ask  = "If `tokens[{i}]` (\"{w}\") is a misspelled action word, which one was intended?"
+# choices = "table:actions"
+# none = "Not an action"
+# applies_to = "action"
+# none_conf = 0.3
+
+# 隣接関係の修正。attach_unit / claim / join / pair
+# [[repair]]
+# op = "claim"
+# marker = "except"
+# role = "exclude"
+# from = ["path", "unresolved"]
+
+[assemble]
+script = "assemble.sh"
+
+[defaults]
+args = []
+
+[confirm]
+preview_readonly = false
+preview_lines = 10
