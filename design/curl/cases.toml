@@ -1,0 +1,296 @@
+# jx test cases for curl。`jx test curl` が回す。
+# words → (規則 → jev モック → repair → assemble) → argv を比較する。書き方は find/cases.toml と同じ。
+# 期待値は jurl 0.1.2 (`../jurl`、ローカルビルド) の `-n --no-jev` 実出力、または src/interpret.rs のテスト、EXAMPLES.md。
+# 「実機」= interpret.rs / docs/demo-capture.json に記録された jev の答え。「想定」= 答えは書いた人の見立て。
+#
+# find に無い期待値のキー (NEW):
+#   risk        = "none" | "unsafe" | "dangerous"   (find の dangerous = true は risk = "dangerous")
+#   confidence  = 解釈全体の min confidence (ホストが取る)
+#   defaults    = schema [defaults] の上書き
+#   state       = jev に送る state の一部 (mask / method_known の検証)
+#   not_asked   = jev に聞いてはいけない質問キー
+#   tokens      = repair 後の語 (join の検証)
+
+# ===========================================================================
+# 規則だけで決まる (jev を呼んだら失敗)
+# ===========================================================================
+
+[[case]]
+words = ["post", "localhost", "application/json", "profile.first_name=job", "profile.family_name=amanda"]
+argv  = ["curl", "-sS", "-X", "POST", "http://localhost/", "-H", "Content-Type: application/json", "-H", "Accept: application/json",
+         "--data", '{"profile":{"first_name":"job","family_name":"amanda"}}']
+
+[[case]]
+words = ["profile.first_name=job", "localhost", "json", "POST"]      # 順序は関係ない、表は大文字小文字を区別しない
+argv  = ["curl", "-sS", "-X", "POST", "http://localhost/", "-H", "Content-Type: application/json", "-H", "Accept: application/json",
+         "--data", '{"profile":{"first_name":"job"}}']
+
+[[case]]
+words = ["api.github.com/repos/rust-lang/rust", "Accept:application/vnd.github+json"]
+argv  = ["curl", "-sS", "https://api.github.com/repos/rust-lang/rust", "-H", "Accept: application/vnd.github+json"]
+
+[[case]]
+words = ["put", "jsonplaceholder.typicode.com/posts/1", "id:=1", "title=changed"]
+argv  = ["curl", "-sS", "-X", "PUT", "https://jsonplaceholder.typicode.com/posts/1", "-H", "Content-Type: application/json",
+         "-H", "Accept: application/json", "--data", '{"id":1,"title":"changed"}']
+risk  = "unsafe"
+
+[[case]]
+words = ["httpbin.org/post", "form", "user=me", "pass=x", "-k"]
+argv  = ["curl", "-sS", "-k", "-X", "POST", "https://httpbin.org/post", "-H", "Content-Type: application/x-www-form-urlencoded",
+         "--data-urlencode", "user=me", "--data-urlencode", "pass=x"]
+
+[[case]]
+# -X / -H は次の語ごと読み替える (rules.next)。裸のポート、配列パス、`--` の後ろは素通し
+words = ["localhost", "3000", "-X", "put", "-H", "X-Foo: 1", "a[0]=x", "a[1]=y"]
+passthrough = ["--max-time", "5"]
+argv  = ["curl", "-sS", "-X", "PUT", "http://localhost:3000/", "-H", "Content-Type: application/json", "-H", "Accept: application/json",
+         "-H", "X-Foo: 1", "--data", '{"a":["x","y"]}', "--max-time", "5"]
+risk  = "unsafe"
+
+[[case]]
+words = ["localhost", "multipart", "file=@a.png", "name=x"]
+argv  = ["curl", "-sS", "-X", "POST", "http://localhost/", "-H", "Content-Type: multipart/form-data", "-F", "file=@a.png", "-F", "name=x"]
+
+[[case]]
+words = ["delete", "localhost:8080/users/42"]
+argv  = ["curl", "-sS", "-X", "DELETE", "http://localhost:8080/users/42"]
+risk  = "unsafe"
+
+[[case]]
+words = ["localhost", "@body.json"]
+argv  = ["curl", "-sS", "-X", "POST", "http://localhost/", "-H", "Content-Type: application/json", "-H", "Accept: application/json",
+         "--data-binary", "@body.json"]
+
+[[case]]
+# クエリの空白は +、値付きフラグは 2 語で curl_flag / curl_flag_value、フラグは -X より前
+words = ["localhost/login", "form", "user=me", "q==a b", "-v", "--retry", "3"]
+argv  = ["curl", "-sS", "-v", "--retry", "3", "-X", "POST", "http://localhost/login?q=a+b",
+         "-H", "Content-Type: application/x-www-form-urlencoded", "--data-urlencode", "user=me"]
+
+[[case]]
+words = [":3000/users", "page==2", "Authorization:Bearer tok"]
+argv  = ["curl", "-sS", "http://localhost:3000/users?page=2", "-H", "Authorization: Bearer tok"]
+
+[[case]]
+words = ["192.168.1.2:8080", "x=1"]                                   # 私有 IP は http
+argv  = ["curl", "-sS", "-X", "POST", "http://192.168.1.2:8080/", "-H", "Content-Type: application/json", "-H", "Accept: application/json",
+         "--data", '{"x":"1"}']
+
+[[case]]
+words = ["localhost", "form", "profile.first_name=job", "tags[0]=a"]  # form はネストを profile[first_name] に平坦化
+argv  = ["curl", "-sS", "-X", "POST", "http://localhost/", "-H", "Content-Type: application/x-www-form-urlencoded",
+         "--data-urlencode", "profile[first_name]=job", "--data-urlencode", "tags[0]=a"]
+
+[[case]]
+words = ["localhost", "price:=1.5", "zip=01234", "ok:=true", "bad:=abc"]   # := は JSON リテラル、読めなければ文字列
+argv  = ["curl", "-sS", "-X", "POST", "http://localhost/", "-H", "Content-Type: application/json", "-H", "Accept: application/json",
+         "--data", '{"price":1.5,"zip":"01234","ok":true,"bad":"abc"}']
+
+[[case]]
+words = ["--unknown-flag", "localhost"]                                # 知らないオプションは単独で素通し
+argv  = ["curl", "-sS", "--unknown-flag", "http://localhost/"]
+
+[[case]]
+# jurl 0.1.2 との差: jurl は `=` を含む語を先に見るので `http://example.com/x?a=1` が未解決になる (2026-09-22 実機で確認)。
+# jx の規則は `=` の左がボディのパス形のときだけ field にするので URL として通る。
+words = ["http://example.com/x?a=1", "b==2"]
+argv  = ["curl", "-sS", "http://example.com/x?a=1&b=2"]
+
+[[case]]
+words = ["localhost", "example.com"]                                  # 2 つ目の URL は once で規則から外れ、--no-jev なら未解決
+error = "unresolved: example.com"
+no_jev = true
+
+# ===========================================================================
+# jev が決める (Mock Oracle)。聞かれていないキーに答えると失敗。
+# ===========================================================================
+
+[[case]]
+# interpret.rs typo_split_and_omitted_scheme (実機 2026-09-22)。job を field_key と誤答するのを repair.pair が直す
+words = ["psot", "localhsot", "3000", "users", "first_name", "job"]
+argv  = ["curl", "-sS", "-X", "POST", "http://localhost:3000/users", "-H", "Content-Type: application/json", "-H", "Accept: application/json",
+         "--data", '{"first_name":"job"}']
+confidence = 0.76           # job: 配置の確からしさ key-first 0.97*0.06 vs value-first 0.02*0.90 → 0.76
+[case.jev]
+"role.0" = { choice = "method", probs = { method = 0.93, url_path = 0.03 } }
+"typo.0" = { choice = "post", probs = { post = 0.97, none = 0.02 } }
+"ct.0"   = { choice = "none" }
+"host.0" = { choice = "none" }
+"role.1" = { choice = "url", probs = { url = 0.88, url_path = 0.07 } }
+"typo.1" = { choice = "none" }
+"ct.1"   = { choice = "none" }
+"host.1" = { choice = "localhost", probs = { localhost = 0.95, "127.0.0.1" = 0.03, none = 0.02 } }
+"role.2" = { choice = "port", probs = { port = 0.91, field_value = 0.05 } }
+"typo.2" = { choice = "none" }
+"ct.2"   = { choice = "none" }
+"host.2" = { choice = "none" }
+"typed.2" = { noul = 0.8 }                       # port なので typed は効かない
+"role.3" = { choice = "url_path", probs = { url_path = 0.85, field_key = 0.10 } }
+"typo.3" = { choice = "none" }
+"ct.3"   = { choice = "none" }
+"host.3" = { choice = "none" }
+"role.4" = { choice = "field_key", probs = { field_key = 0.97, field_value = 0.02 } }
+"typo.4" = { choice = "none" }
+"ct.4"   = { choice = "none" }
+"host.4" = { choice = "none" }
+"role.5" = { choice = "field_key", probs = { field_key = 0.90, field_value = 0.06 } }
+"typo.5" = { choice = "none" }
+"ct.5"   = { choice = "none" }
+"host.5" = { choice = "none" }
+"get_intent" = { noul = 0.2 }
+# join.1〜join.5 は聞かれるが答えなくてよい (未回答 = 結合しない)
+
+[[case]]
+# interpret.rs get_intent_turns_pairs_into_query (実機)。メソッド無し + 読み取り意図 → GET、key/value はクエリ
+words = ["api.agify.io", "name", "michael"]
+argv  = ["curl", "-sS", "https://api.agify.io/?name=michael"]
+[case.jev]
+"role.1" = { choice = "field_key", probs = { field_key = 0.55, query = 0.40 } }
+"typo.1" = { choice = "none" }
+"ct.1"   = { choice = "none" }
+"host.1" = { choice = "none" }
+"role.2" = { choice = "field_value", probs = { field_value = 0.9, field_key = 0.05 } }
+"typo.2" = { choice = "none" }
+"ct.2"   = { choice = "none" }
+"host.2" = { choice = "none" }
+"get_intent" = { noul = 0.89 }
+
+[[case]]
+# interpret.rs explicit_method_suppresses_get_intent_question。規則で決まった語は聞かない、method_known を state に入れる
+words = ["post", "localhost", "first_name", "job"]
+argv  = ["curl", "-sS", "-X", "POST", "http://localhost/", "-H", "Content-Type: application/json", "-H", "Accept: application/json",
+         "--data", '{"first_name":"job"}']
+not_asked = ["get_intent", "role.0", "role.1"]
+state = { method_known = "POST", "hints.0" = "method" }
+[case.jev]
+"role.2" = { choice = "field_key", probs = { field_key = 0.97 } }
+"role.3" = { choice = "field_value", probs = { field_value = 0.95 } }
+
+[[case]]
+# interpret.rs header_value_never_reaches_jev。header は state.tokens で <header> に置き換わる
+words = ["localhost", "Authorization:Bearer-s3cr3t", "first_name", "job"]
+argv  = ["curl", "-sS", "-X", "POST", "http://localhost/", "-H", "Content-Type: application/json", "-H", "Accept: application/json",
+         "-H", "Authorization: Bearer-s3cr3t", "--data", '{"first_name":"job"}']
+state = { tokens = ["localhost", "<header>", "first_name", "job"] }
+[case.jev]
+"role.2" = { choice = "field_key", probs = { field_key = 0.97 } }
+"role.3" = { choice = "field_value", probs = { field_value = 0.95 } }
+"get_intent" = { noul = 0.1 }
+
+[[case]]
+# interpret.rs typed_noul_sends_number。typed > 0.5 なら数値、それ以外は文字列
+words = ["post", "localhost", "age", "30", "active", "true"]
+argv  = ["curl", "-sS", "-X", "POST", "http://localhost/", "-H", "Content-Type: application/json", "-H", "Accept: application/json",
+         "--data", '{"age":30,"active":"true"}']
+[case.jev]
+"role.2"  = { choice = "field_key", probs = { field_key = 0.97 } }
+"role.3"  = { choice = "field_value", probs = { field_value = 0.9, port = 0.05 } }
+"typed.3" = { noul = 0.92 }
+"role.4"  = { choice = "field_key", probs = { field_key = 0.97 } }
+"role.5"  = { choice = "field_value", probs = { field_value = 0.95 } }
+"typed.5" = { noul = 0.3 }
+
+[[case]]
+# interpret.rs misspelled_content_type_is_fixed_from_table。confidence は min(role, ct)。defaults の text/plain を上書きする
+words = ["post", "localhost", "jsno", "a=1"]
+defaults = { content_type = "text/plain" }
+argv  = ["curl", "-sS", "-X", "POST", "http://localhost/", "-H", "Content-Type: application/json", "-H", "Accept: application/json",
+         "--data", '{"a":"1"}']
+confidence = 0.8
+[case.jev]
+"role.2" = { choice = "content_type", probs = { content_type = 0.8, url_path = 0.1 } }
+"typo.2" = { choice = "none" }
+"ct.2"   = { choice = "json", probs = { json = 0.9, none = 0.05 } }
+"host.2" = { choice = "none" }
+
+[[case]]
+# interpret.rs unanswered_token_stays_unresolved
+words = ["post", "localhost", "first_name", "job"]
+error = "unresolved: job"
+[case.jev]
+"role.2" = { choice = "field_key", probs = { field_key = 0.97 } }
+
+[[case]]
+# interpret.rs join_merges_multi_word_value (実機 join.4 = 0.81)。`hello world` が 1 語になる
+words = ["httpbin.org/anything", "post", "title", "hello", "world"]
+argv  = ["curl", "-sS", "-X", "POST", "https://httpbin.org/anything", "-H", "Content-Type: application/json", "-H", "Accept: application/json",
+         "--data", '{"title":"hello world"}']
+tokens = ["httpbin.org/anything", "post", "title", "hello world"]
+confidence = 0.81
+not_asked = ["join.2"]      # post は規則で決まっているので title はその続きになれない
+[case.jev]
+"role.2" = { choice = "field_key", probs = { field_key = 1.0 } }
+"role.3" = { choice = "field_value", probs = { field_value = 0.93, field_key = 0.07 } }
+"join.3" = { noul = 0.05 }
+"role.4" = { choice = "field_key", probs = { field_key = 0.6, field_value = 0.4 } }
+"join.4" = { noul = 0.81 }
+
+[[case]]
+# interpret.rs join_chains_and_extends_a_rule_field。規則の `k=v` にも連鎖して結合する
+words = ["post", "httpbin.org/anything", "title=hello", "world", "again"]
+argv  = ["curl", "-sS", "-X", "POST", "https://httpbin.org/anything", "-H", "Content-Type: application/json", "-H", "Accept: application/json",
+         "--data", '{"title":"hello world again"}']
+tokens = ["post", "httpbin.org/anything", "title=hello world again"]
+[case.jev]
+"role.3" = { choice = "field_key", probs = { field_key = 0.5 } }
+"join.3" = { noul = 0.7 }
+"role.4" = { choice = "field_value", probs = { field_value = 0.5 } }
+"join.4" = { noul = 0.9 }
+
+[[case]]
+# interpret.rs join_never_swallows_a_key。前が値でなければ jev が join と言っても結合しない
+words = ["post", "localhost", "first_name", "job"]
+argv  = ["curl", "-sS", "-X", "POST", "http://localhost/", "-H", "Content-Type: application/json", "-H", "Accept: application/json",
+         "--data", '{"first_name":"job"}']
+tokens = ["post", "localhost", "first_name", "job"]
+[case.jev]
+"role.2" = { choice = "field_key", probs = { field_key = 0.98 } }
+"role.3" = { choice = "field_value", probs = { field_value = 0.9 } }
+"join.3" = { noul = 0.9 }
+
+[[case]]
+# EXAMPLES.md: パスが 2 つに分かれている (実機 confidence 0.57、確率の内訳は想定)
+words = ["api.zippopotam.us", "jp", "100-0001"]
+argv  = ["curl", "-sS", "https://api.zippopotam.us/jp/100-0001"]
+[case.jev]
+"role.1" = { choice = "url_path", probs = { url_path = 0.57, field_key = 0.30 } }
+"typo.1" = { choice = "none" }
+"ct.1"   = { choice = "none" }
+"host.1" = { choice = "none" }
+"role.2" = { choice = "url_path", probs = { url_path = 0.8, field_value = 0.15 } }
+"typo.2" = { choice = "none" }
+"ct.2"   = { choice = "none" }
+"host.2" = { choice = "none" }
+"get_intent" = { noul = 0.9 }
+
+[[case]]
+# EXAMPLES.md: メソッドが最後、値は型付け (確率は想定)。userId 1 → 1
+words = ["jsonplaceholder.typicode.com/posts", "title", "hello", "body", "world", "userId", "1", "post"]
+argv  = ["curl", "-sS", "-X", "POST", "https://jsonplaceholder.typicode.com/posts", "-H", "Content-Type: application/json",
+         "-H", "Accept: application/json", "--data", '{"title":"hello","body":"world","userId":1}']
+not_asked = ["get_intent", "role.7"]
+[case.jev]
+"role.1" = { choice = "field_key", probs = { field_key = 0.95 } }
+"role.2" = { choice = "field_value", probs = { field_value = 0.9, field_key = 0.08 } }
+"join.2" = { noul = 0.05 }
+"role.3" = { choice = "field_key", probs = { field_key = 0.9, field_value = 0.08 } }
+"join.3" = { noul = 0.1 }
+"role.4" = { choice = "field_value", probs = { field_value = 0.9, field_key = 0.08 } }
+"join.4" = { noul = 0.1 }
+"role.5" = { choice = "field_key", probs = { field_key = 0.95 } }
+"join.5" = { noul = 0.05 }
+"role.6" = { choice = "field_value", probs = { field_value = 0.9 } }
+"join.6" = { noul = 0.05 }
+"typed.6" = { noul = 0.9 }
+
+[[case]]
+# 単独の値 (キーが無い) は assemble の error
+words = ["localhost", "job"]
+error = 'value "job" has no key'
+[case.jev]
+"role.1" = { choice = "field_value", probs = { field_value = 0.7 } }
+"typo.1" = { choice = "none" }
+"ct.1"   = { choice = "none" }
+"host.1" = { choice = "none" }
+"get_intent" = { noul = 0.5 }

@@ -1,11 +1,11 @@
 #!/usr/bin/env bash
 # jx assemble for find (jind 0.1.0 の assemble.rs + find.rs 相当)。
 #
-# stdin : {"tokens":[{"text","role","value","amount":{"n","unit","at_least"}|null}], "passthrough":[...], "defaults":[...]}
+# stdin : {"tokens":[{"text","role","value","amount":{"n","unit","at_least"}|null}], "passthrough":[...], "answers":{}, "defaults":{"args":[...]}}
 #         tokens はすべて role が付いている (未解決はホストが弾く)。confidence はホストが min を取るのでここでは見ない。
-# stdout: {"argv":[...], "preview":[...]|null, "dangerous":bool, "postprocess":"count_lines"|null, "error":"..."|null}
+# stdout: {"argv":[...], "preview":[...]|null, "risk":"none"|"dangerous", "postprocess":"count_lines"|null, "error":"..."|null}
 #
-# preview   = 実行前に見せる用の argv (delete なら -delete 抜き)。dangerous=true のときホストが先に回して最大 N 件見せる。
+# preview   = 実行前に見せる用の argv (delete なら -delete 抜き)。risk="dangerous" のときホストが先に回して最大 N 件見せる。
 # postprocess = count なら find の出力行数をホストが数えて表示する。
 set -euo pipefail
 
@@ -70,14 +70,14 @@ jq -c '
           + ($sizes | add // [])
           + ([$excl[] | ["-not", "-path", ("*/" + . + "/*"), "-not", "-path", ("*/" + .)]] | add // [])
           + $extra
-          + (.defaults // [])
+          + (.defaults.args // [])
           + (.passthrough // [])
         ) as $base
       | (if $action == "print0" then ["-print0"] elif $action == "ls" then ["-ls"] else [] end) as $tail
       | {
           argv:        ($base + $tail + (if $action == "delete" then ["-delete"] else [] end)),
           preview:     (if $action == "delete" then ($base + $tail) else null end),
-          dangerous:   ($action == "delete"),
+          risk:        (if $action == "delete" then "dangerous" else "none" end),
           postprocess: (if $action == "count" then "count_lines" else null end),
           error:       null
         }

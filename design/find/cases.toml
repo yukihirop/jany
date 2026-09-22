@@ -8,7 +8,7 @@
 words = ["/var/log", "*.log", "files", "older", "than", "+7d", "delete"]
 argv  = ["find", "/var/log", "-type", "f", "-name", "*.log", "-mtime", "+7", "-delete"]
 preview = ["find", "/var/log", "-type", "f", "-name", "*.log", "-mtime", "+7"]
-dangerous = true
+risk = "dangerous"
 
 [[case]]
 words = ["log", "files", "older", "than", "7", "days", "in", "/var/log", "delete"]

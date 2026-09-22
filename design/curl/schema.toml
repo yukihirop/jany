@@ -1,0 +1,341 @@
+# jx schema: curl (jurl 0.1.2 の rules.rs / token.rs / jev/prompt.rs / repair.rs をデータに落としたもの)
+#
+# find と同じ流れ: 規則 → jev → repair → assemble.sh。
+# find に無かった DSL の要素には `# NEW:` を付けた。HOST.md の表に足すべきもの。
+
+[command]
+name = "curl"
+description = """jurl: an httpie-like wrapper that turns loosely ordered command words into one curl command. \
+Words may be misspelled, split (key and value as separate words), or out of order."""
+example = "post localhost json profile.first_name=job"
+
+# ---------------------------------------------------------------------------
+# 役割。jev = のあるものだけが Choice の候補。
+# ---------------------------------------------------------------------------
+[[roles]]
+key = "method"
+jev = "HTTP method, possibly misspelled (get/post/put/patch/delete/head/options)"
+table = "methods"
+
+[[roles]]
+key = "url"
+jev = "Host or full URL (localhost, example.com/path, http://...)"
+
+[[roles]]
+key = "url_path"
+jev = "A path segment that belongs after the host (users, v1/items)"
+
+[[roles]]
+key = "port"
+jev = "A bare port number that belongs to the host"
+
+[[roles]]
+key = "content_type"
+jev = "A MIME type or its short name, possibly misspelled (json, form, application/json)"
+table = "content_types"
+
+[[roles]]
+key = "field_key"
+jev = "A body field name whose value is the next token"
+
+[[roles]]
+key = "field_value"
+jev = "A body field value whose name is the previous token"
+
+[[roles]]
+key = "query"
+jev = "A query-string key=value pair"
+
+[[roles]]
+key = "body_file"
+jev = "A file reference starting with @"
+
+[[roles]]
+key = "curl_flag"
+jev = "A curl option such as -k or --max-time"
+
+[[roles]]
+key = "curl_flag_value"
+jev = "The argument of the previous curl option"
+
+[[roles]]
+key = "noise"
+jev = "Filler with no meaning for the request"
+
+[[roles]]
+key = "field"              # 規則でしか付かない `k=v` `k:=v`。jev には見せない (find の passthrough と同じ)
+
+[[roles]]
+key = "header"             # 規則でしか付かない。秘密を送らないため jev には語そのものも見せない
+mask = "<header>"          # NEW: jev の state.tokens ではこの文字列に置き換える (jurl prompt.rs build)
+
+# ---------------------------------------------------------------------------
+# 語テーブル。key → 補正値 (fixed)。大文字小文字は区別しない (`POST` も `post` も当たる)。
+# ---------------------------------------------------------------------------
+[tables.methods]
+GET     = ["get"]
+POST    = ["post"]
+PUT     = ["put"]
+PATCH   = ["patch"]
+DELETE  = ["delete"]
+HEAD    = ["head"]
+OPTIONS = ["options"]
+
+[tables.content_types]
+"application/json"                  = ["json"]
+"application/x-www-form-urlencoded" = ["form", "urlencoded"]
+"multipart/form-data"               = ["multipart"]
+"application/xml"                   = ["xml"]
+"text/plain"                        = ["text"]
+
+[tables.local_hosts]                 # host_typo 質問の候補 (`localhsot` → localhost)
+localhost   = ["localhost"]
+"127.0.0.1" = ["127.0.0.1"]
+
+# curl のオプション。値を取るものと取らないもの。-H と -X は curl 側の意味に読み替えるので別 (rules 先頭)。
+[tables.curl_flags_bare]
+_ = ["-k", "--insecure", "-v", "--verbose", "-L", "--location", "-i", "--include", "-I", "--head",
+     "-s", "--silent", "-S", "--show-error", "-f", "--fail", "--fail-with-body",
+     "--compressed", "--http1.1", "--http2", "--http3", "-4", "-6", "-N", "--no-buffer"]
+
+[tables.curl_flags_with_value]
+_ = ["-m", "--max-time", "--connect-timeout", "-u", "--user", "-A", "--user-agent",
+     "-b", "--cookie", "-c", "--cookie-jar", "-e", "--referer", "-x", "--proxy",
+     "--retry", "--retry-delay", "-o", "--output", "-D", "--dump-header", "-w", "--write-out",
+     "--cacert", "--cert", "--key", "--resolve", "--interface", "--unix-socket",
+     "-d", "--data", "--data-raw", "--data-binary", "--data-urlencode", "-F", "--form", "-T", "--upload-file"]
+
+# ---------------------------------------------------------------------------
+# 規則。上から順に最初に当たったものが勝つ。
+# NEW: match.regex (Rust regex、先読み無し)、fixed = "$upper" | "$lower" | "$1" (置換テンプレート)、
+#      next = { role, fixed }  (次の語も一緒に消費して役割を付ける。jurl の -H / -X / 値付きフラグ)、
+#      once = true            (同じ role が既に規則で付いていたらこの規則は当たらない。jurl の have_method / have_url)、
+#      when.prev_regex        (直前の語の text が正規表現に当たる)
+# ---------------------------------------------------------------------------
+
+# --- curl の語 (次の語ごと読み替える 2 語規則) --------------------------------
+[[rules]]
+match = { word = ["-H", "--header"] }
+role  = "noise"
+note  = "header flag"
+next  = { role = "header" }                       # NEW: 次の語は header (jev には見せない)
+
+[[rules]]
+match = { word = ["-X", "--request"] }
+role  = "noise"
+note  = "method flag"
+next  = { role = "method", fixed = "$upper" }     # NEW: 次の語は method、大文字にする。once は効かせない (-X は明示)
+
+[[rules]]
+match = { table = "curl_flags_with_value" }
+role  = "curl_flag"
+next  = { role = "curl_flag_value" }              # 次の語が無ければ単独
+
+[[rules]]
+match = { table = "curl_flags_bare" }
+role  = "curl_flag"
+
+[[rules]]
+# 知らない curl オプション。値を取るか分からないので単独で素通し (`-` 始まりで `=` を含まない)
+match = { regex = '^-[^=]+$' }
+role  = "curl_flag"
+note  = "unknown curl option, passed through"
+
+# --- メソッド (最初の 1 語だけ) -----------------------------------------------
+[[rules]]
+match = { table = "methods" }
+role  = "method"                                  # fixed = 表のキー (POST)
+once  = true                                      # NEW: 2 つ目の `post` は jev に回す (jurl の have_method)
+
+# --- k=v 系 (キーは body path: `a.b` `a[0].c` `a/b`) -----------------------------
+[[rules]]
+match = { regex = '^[A-Za-z_][A-Za-z0-9_.\[\]/-]*:=' }
+role  = "field"
+tag   = "typed"                                   # `:=` は JSON リテラル。join の対象外にもする
+
+[[rules]]
+match = { regex = '^[A-Za-z_][A-Za-z0-9_.\[\]/-]*==' }
+role  = "query"
+tag   = "kv"                                      # `k==v` は完成済み。repair.pair の対象外
+
+[[rules]]
+match = { regex = '^[A-Za-z_][A-Za-z0-9_.\[\]/-]*=' }
+role  = "field"
+
+[[rules]]
+match = { prefix = "@", min_len = 2 }
+role  = "body_file"
+
+# --- Content-Type ---------------------------------------------------------------
+[[rules]]
+match = { table = "content_types" }
+role  = "content_type"                            # fixed = MIME
+
+[[rules]]
+match = { regex = '(?i)^(application|text|multipart|image|audio|video)/[A-Za-z0-9.+-]+$' }
+role  = "content_type"
+fixed = "$lower"
+
+# --- ヘッダ `Name:value` (値が数字始まりなら URL の可能性があるので除外: localhost:3000) ---
+[[rules]]
+match = { regex = '^[A-Za-z][A-Za-z0-9-]*:[^0-9/].*$' }
+role  = "header"
+
+# --- URL (最初の 1 語だけ)。jurl rules.rs looks_like_url を 4 本に分けた ------------
+[[rules]]
+match = { regex = '://' }
+role  = "url"
+once  = true
+
+[[rules]]
+match = { regex = '^:[0-9]' }                     # :3000/users
+role  = "url"
+once  = true
+
+[[rules]]
+match = { regex = '^(localhost|[0-9]{1,3}(\.[0-9]{1,3}){3})(:[0-9]+)?(/.*)?$' }
+role  = "url"
+once  = true
+
+[[rules]]
+# host.tld に既知の TLD。`profile.name` のような body path は当たらない (jurl KNOWN_TLDS)
+match = { regex = '(?i)^[A-Za-z0-9-]+(\.[A-Za-z0-9-]+)*\.(com|net|org|io|dev|app|ai|co|jp|me|xyz|info|biz|us|uk|de|fr|local|localhost|test|internal|lan|home|example|invalid)(:[0-9]+)?(/.*)?$' }
+role  = "url"
+once  = true
+
+[[rules]]
+# 知らない TLD でもポートかパスが付いていれば URL (`profile.name/x`)
+match = { regex = '^[A-Za-z0-9-]+(\.[A-Za-z0-9-]+)+(:[0-9]+(/.*)?|/.*)$' }
+role  = "url"
+once  = true
+
+# --- 分かれたキー `first_name:` -------------------------------------------------
+[[rules]]
+match = { regex = '^([A-Za-z_][A-Za-z0-9_-]*):$' }
+role  = "field_key"
+fixed = "$1"                                      # NEW: 正規表現のグループ
+
+[[rules]]
+match = { word = ["=", ":"] }
+role  = "noise"
+
+# --- 隣接: 裸のホストの直後の数はポート (jurl adjacency_pass) ----------------------
+[[rules]]
+match = { regex = '^([1-9][0-9]{0,3}|[1-5][0-9]{4}|6[0-4][0-9]{3}|65[0-4][0-9]{2}|655[0-2][0-9]|6553[0-5])$' }   # 1〜65535 (jurl is_port)
+when  = { prev_role = "url", prev_regex = '^([A-Za-z]+://)?[^:/]+$' }   # NEW: prev_regex。前がポートもパスも無いホスト
+role  = "port"
+
+# ---------------------------------------------------------------------------
+# jev への追加質問。when.regex は語の形 (find の alphabetic/max_len の一般化)。
+# NEW: none_conf     jev が none と言ったとき confidence をこの値以下に落とす (jurl apply の 0.3)
+# NEW: sets.tag      noul > 0.5 なら語にタグを付ける (typed)
+# NEW: when.prev_*   直前の語の状態
+# NEW: scope = "command"  語ごとでなく 1 コマンドに 1 問。答えは repair / assemble が `answers.<key>` で読む
+# ---------------------------------------------------------------------------
+[[questions]]
+key  = "typo"
+kind = "choice"
+when = { resolved = false, regex = '^[A-Za-z0-9/._-]{1,40}$' }
+ask  = "If `tokens[{i}]` (\"{w}\") is a possibly misspelled HTTP method, which one was intended?"
+choices = "table:methods"                # 候補は表の語 (get/post/…) + none
+none = "Not an HTTP method"
+applies_to = "method"                    # jev が role=method と言い、表に無い語なら答えを fixed に
+none_conf = 0.3
+
+[[questions]]
+key  = "ct"
+kind = "choice"
+when = { resolved = false, regex = '^[A-Za-z0-9/._-]{1,40}$' }
+ask  = "If `tokens[{i}]` (\"{w}\") is a possibly misspelled content type, which one was intended?"
+choices = "table:content_types"          # 候補は json/form/… (説明文に MIME)
+none = "Not a content type"
+applies_to = "content_type"
+none_conf = 0.3
+
+[[questions]]
+key  = "host"
+kind = "choice"
+when = { resolved = false, regex = '^[A-Za-z0-9/._-]{1,40}$' }
+ask  = "If `tokens[{i}]` (\"{w}\") is a misspelled well-known local host name, which one?"
+choices = "table:local_hosts"
+none = "Not a local host name, or spelled correctly"
+applies_to = "url"                       # none なら text のまま (jurl: looks_like_url なら聞かない相当)
+
+[[questions]]
+# `title hello world` の world: 前の語と同じ値の続きか。前が未解決か、規則の `k=v` (typed でない) のときだけ
+key  = "join"
+kind = "noul"
+when = { resolved = false, prev_any = [{ resolved = false }, { role = "field", tag_not = "typed" }] }
+ask  = """Is `tokens[{i}]` (\"{w}\") a continuation of the same value as `tokens[{prev_i}]` (\"{prev_w}\"), \
+i.e. do the two words together form one multi-word value (a title, a sentence, a name), \
+rather than `tokens[{i}]` starting a new key or being a separate item?"""
+# 答えは repair.join が読む (書き戻しは無い)
+
+[[questions]]
+key  = "typed"
+kind = "noul"
+when = { resolved = false, regex = '^(true|false|null|-?[0-9]+(\.[0-9]+)?([eE][-+]?[0-9]+)?)$' }
+ask  = "If `tokens[{i}]` (\"{w}\") is a body field value, should it be sent as a JSON number, boolean or null rather than a string?"
+applies_to = "field_value"
+sets = { tag = "typed" }                 # noul > 0.5 なら tag
+
+[[questions]]
+# メソッドが無く jev に聞く語があるときだけ。「読み取り (GET + クエリ) か」
+key   = "get_intent"
+kind  = "noul"
+scope = "command"                        # NEW
+when  = { no_role = "method", any_unresolved = true }
+ask   = "Is this command a read-only lookup (an HTTP GET whose key/value words are query parameters), rather than sending or creating data (POST)?"
+
+# jev の state には find と同じく全語 (mask 済み) と hints (規則で決まった role) に加えて
+# method_known (規則で決まった method の fixed) を入れる。NEW: [jev.state] extra = { method_known = "role:method" }
+[jev.state]
+method_known = { value_of = "method" }   # NEW: その role の語の value (無ければ null)
+
+# ---------------------------------------------------------------------------
+# repair。上から順。
+# NEW: op = "join"  jev の noul 答え (join.i) > 0.5 の語を前の語に結合する (jurl repair::merge_joined)
+# NEW: op = "pair"  key value key value の交互配置を jev の確率で選ぶ (jurl repair::pair_key_values)
+# ---------------------------------------------------------------------------
+[[repair]]
+op = "join"
+answer = "join"                          # questions.key。後ろから見るので `a b c` も 1 つになる
+sep = " "
+# 結合できる「前の語」。cur は jev 決めであること
+into = [
+  { role = "field_value", source = "jev" },
+  { role = "field", tag_not = "typed" },
+  { source = "jev", chained = true },    # 前の語自身が join.{i-1} > 0.5 なら中間の役割を問わず連鎖を切らない
+]
+# 結合後: text = prev + sep + cur、fixed / tag を消す、confidence = min(prev, p)、probs.field_value = min(·, p)
+
+[[repair]]
+op = "pair"
+# 連続する {field_key, field_value, 裸の query} の run ごとに「キー始まり」「値始まり」の尤度を比べる
+members = ["field_key", "field_value", { role = "query", tag_not = "kv" }]
+key_probs   = ["field_key", "query"]     # jev の probs のうち「キー」と数える役割
+value_probs = ["field_value"]
+key_role    = "field_key"
+value_role  = "field_value"
+# run に query が居る、method が GET、または method 無しで answers.get_intent > 0.5 ならキーは query
+key_role_if = { role = "query", any = [{ member_role = "query" }, { value_of = "method", is = "GET" }, { answer = "get_intent", gt = 0.5, no_role = "method" }] }
+# confidence: 配置で役割を変えた語は配置の確からしさ P(採) / (P(採) + P(他))、変えていない語は min(役割 p, 配置)
+
+# ---------------------------------------------------------------------------
+# 実行
+# ---------------------------------------------------------------------------
+[assemble]
+script = "assemble.sh"
+# stdin: {tokens, passthrough, answers, defaults} / stdout: {argv, preview, risk, postprocess, error}
+# NEW: answers  = scope="command" の質問の答え ({get_intent: 0.89})。curl は読まない (pair で消化済み) が契約として渡す
+# NEW: defaults = 下の [defaults] を user config で上書きしたもの (find の `defaults` 配列は `defaults.args` に)
+# NEW: risk     = "none" | "unsafe" | "dangerous"。find の dangerous=true は risk="dangerous" に
+
+[defaults]
+content_type = "application/json"        # ボディがあって Content-Type 未指定のとき
+args = []                                # jurl の defaults.curl_args。`curl -sS` の直後に入る
+
+[confirm]
+preview_lines = 10                       # risk = "dangerous" のとき (curl は使わない)
+# risk = "unsafe" (PUT/PATCH/DELETE): -y は効く。confirm_below の代わりに confirm_below_unsafe (既定 0.9) を使う
+confirm_below_unsafe = 0.9
