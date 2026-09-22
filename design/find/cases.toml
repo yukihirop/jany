@@ -1,0 +1,68 @@
+# jx test cases for find。`jx test find` が回す。
+# words → (規則 → jev モック → repair → assemble) → argv を比較する。
+# jev = 省略なら「規則だけで全部決まる」ことも検証する (jev を呼んだら失敗)。
+# jev = {...} は Mock Oracle の答え。聞かれていないキーに答えると失敗 (jind interpret.rs の Mock と同じ)。
+# 期待値は jind 0.1.0 の README / docs/demo-capture.json の実出力。
+
+[[case]]
+words = ["/var/log", "*.log", "files", "older", "than", "+7d", "delete"]
+argv  = ["find", "/var/log", "-type", "f", "-name", "*.log", "-mtime", "+7", "-delete"]
+preview = ["find", "/var/log", "-type", "f", "-name", "*.log", "-mtime", "+7"]
+dangerous = true
+
+[[case]]
+words = ["log", "files", "older", "than", "7", "days", "in", "/var/log", "delete"]
+argv  = ["find", "/var/log", "-type", "f", "-iname", "*.log", "-mtime", "+7", "-delete"]
+[case.jev]
+"role.0"    = { choice = "extension", confidence = 0.88 }
+"role.4"    = { choice = "time_amount", confidence = 0.95 }
+"atleast.4" = { noul = 0.97 }
+# unit.4 は次が unit 語なので聞かれない。type_typo/action_typo は "log" にだけ聞かれる。
+"type_typo.0"   = { choice = "none" }
+"action_typo.0" = { choice = "none" }
+
+[[case]]
+words = ["rs", "edited", "within", "an", "hour"]
+argv  = ["find", ".", "-iname", "*.rs", "-mmin", "-60"]
+[case.jev]
+"role.0"        = { choice = "extension", confidence = 0.9 }
+"type_typo.0"   = { choice = "none" }
+"action_typo.0" = { choice = "none" }
+"atleast.4"     = { noul = 0.05 }        # `hour` は規則で time_amount(n=1)、向きだけ聞く
+
+[[case]]
+words = ["empty", "folders", "depth", "2", "count"]
+argv  = ["find", ".", "-maxdepth", "2", "-type", "d", "-empty"]
+postprocess = "count_lines"
+[case.jev]
+"role.3"    = { choice = "time_amount", confidence = 0.5 }   # jev が間違えても repair.claim が depth に直す
+"unit.3"    = { choice = "none" }
+"atleast.3" = { noul = 0.5 }
+
+[[case]]
+words = ["*.log", "src", "except", "target", "ls"]
+argv  = ["find", "src", "-name", "*.log", "-not", "-path", "*/target/*", "-not", "-path", "*/target", "-ls"]
+setup = { dirs = ["src"] }               # `src` は実在ディレクトリで規則 path。target は jev
+[case.jev]
+"role.3"        = { choice = "name_word", confidence = 0.7 }
+"type_typo.3"   = { choice = "none" }
+"action_typo.3" = { choice = "none" }
+
+[[case]]
+words = ["files", "changed", "today"]
+argv  = ["find", ".", "-type", "f", "-mtime", "-1"]
+
+[[case]]
+words = ["big", "mp4", "over", "1.5GB", "ls"]
+argv  = ["find", ".", "-iname", "*.mp4", "-size", "+1536M", "-ls"]
+[case.jev]
+"role.1"        = { choice = "extension", confidence = 0.9 }
+"type_typo.1"   = { choice = "none" }
+"action_typo.1" = { choice = "none" }
+"role.3"        = { choice = "size_amount", confidence = 0.95 }
+"atleast.3"     = { noul = 0.9 }
+
+[[case]]
+words = ["-perm", "644", "-newer", "x"]
+error = "unresolved: x"
+no_jev = true

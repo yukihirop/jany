@@ -1,0 +1,305 @@
+# jx schema: find (jind 0.1.0 の rules.rs / token.rs / prompt.rs / repair.rs をデータに落としたもの)
+#
+# ホストは上から順に規則を試し、決まらなかった語を jev に回し、repair で隣接関係を直し、
+# 役割付きトークンを assemble.sh に渡す。このファイルに「find がどう組み立つか」は書かない(それは assemble.sh)。
+
+[command]
+name = "find"
+description = """jind: turns loosely ordered command words into one `find` command. \
+Words may be misspelled, split, or out of order. Numbers may be ages (older than 7 days), sizes (over 10 MB) or depths (2 levels)."""
+example = "log files older than 7 days in /var/log delete"
+
+# ---------------------------------------------------------------------------
+# 役割。jev = true のものだけが jev の Choice の候補になる(説明文はそのまま jev に渡す)。
+# ---------------------------------------------------------------------------
+[[roles]]
+key = "path"
+jev = "A directory to search in (a path like src, /var/log, ~/Downloads)"
+
+[[roles]]
+key = "name_pattern"
+jev = "A glob for the file name (*.log, report-*)"
+
+[[roles]]
+key = "extension"
+jev = "A bare file extension (log, rs, png, jpeg)"
+
+[[roles]]
+key = "name_word"
+jev = "A word that should appear somewhere in the file name"
+
+[[roles]]
+key = "type"
+jev = "Kind of entry: file(s), dir(s)/folder(s), symlink(s)"
+table = "types"          # 補正値はこの表から (typo 補正の質問にも使う)
+
+[[roles]]
+key = "time_amount"
+jev = "A number that is an age (days/hours/minutes since modified)"
+amount = "time"          # この役割の語は amount (数・単位・向き) を持つ
+
+[[roles]]
+key = "size_amount"
+jev = "A number that is a file size (bytes/KB/MB/GB)"
+amount = "size"
+
+[[roles]]
+key = "depth"
+jev = "A number of directory levels to descend"
+amount = "count"         # 単位も向きも持たない数
+
+[[roles]]
+key = "unit"
+jev = "A unit word belonging to the previous number (days, hours, MB, KB)"
+
+[[roles]]
+key = "qualifier"
+jev = "A comparison word: older, newer, than, within, last, larger, smaller, over, under, at, least, modified"
+
+[[roles]]
+key = "exclude_marker"
+jev = "A word saying the following names are to be skipped: except, excluding, skip, ignore, not, without"
+
+[[roles]]
+key = "exclude"
+jev = "A directory name or pattern to skip (node_modules, .git, target)"
+
+[[roles]]
+key = "depth_marker"
+jev = "A word saying the next number is a depth: depth, maxdepth, levels, deep"
+
+[[roles]]
+key = "empty"
+jev = "The word empty: match empty files or directories"
+
+[[roles]]
+key = "action"
+jev = "What to do with matches: delete/remove/rm, ls/list, count, print0"
+table = "actions"
+
+[[roles]]
+key = "noise"
+jev = "Filler with no meaning for the search (find, in, the, that, all, with, me)"
+
+[[roles]]
+key = "passthrough"      # jind の find_arg。jev には見せない
+# (jev 無し)
+
+# ---------------------------------------------------------------------------
+# 量。ホスト組み込みの amount パーサ (`7` `7d` `+7d` `>10M` `1.5GB`) の単位表。
+# 符号 + / > = at_least、- / < = at_most。dimension が違う役割に付いたら単位が勝つ (repair.attach_unit)。
+# ---------------------------------------------------------------------------
+[amount]
+# 小文字 m は分か MB か分からないので「単位なし」扱いにして jev に回す (jind rules.rs parse_amount と同じ)
+ambiguous_suffixes = ["m"]
+
+[amount.units.time]
+minutes = ["min", "mins", "minute", "minutes"]
+hours   = ["h", "hr", "hrs", "hour", "hours"]
+days    = ["d", "day", "days"]
+weeks   = ["w", "wk", "week", "weeks"]
+
+[amount.units.size]
+bytes = ["b", "byte", "bytes"]
+KB    = ["k", "kb", "kib", "K"]
+MB    = ["mb", "mib", "meg", "megs", "megabyte", "megabytes", "M"]
+GB    = ["g", "gb", "gib", "gig", "gigs", "gigabyte", "gigabytes", "G"]
+
+# 大文字小文字を区別する接尾辞 (`M` は MB、`m` は曖昧)
+[amount.case_sensitive]
+suffixes = ["K", "M", "G", "m"]
+
+# ---------------------------------------------------------------------------
+# 語テーブル。key → 補正値 (fixed)。rules の `table = ` と questions の typo 補正から参照する。
+# ---------------------------------------------------------------------------
+[tables.types]
+f = ["f", "file", "files", "regular"]
+d = ["d", "dir", "dirs", "directory", "directories", "folder", "folders"]
+l = ["l", "symlink", "symlinks", "link", "links"]
+
+[tables.actions]
+delete = ["delete", "remove", "rm", "unlink"]
+ls     = ["ls", "list", "long", "details"]
+count  = ["count"]
+print0 = ["print0"]
+
+[tables.qualifiers]
+_ = ["older", "newer", "than", "within", "last", "past", "recent", "recently", "modified", "changed", "edited", "touched", "since", "ago",
+     "before", "after", "larger", "bigger", "smaller", "greater", "less", "more", "over", "above", "below", "under", "at", "least", "most",
+     "min", "max", "minimum", "maximum", "exceeding", "huge", "big", "small", "tiny", "old", "new"]
+
+[tables.exclude_markers]
+_ = ["except", "excluding", "exclude", "skip", "skipping", "ignore", "ignoring", "without", "but"]
+
+[tables.depth_markers]
+_ = ["depth", "maxdepth", "levels", "level", "deep"]
+
+[tables.noise]
+_ = ["find", "search", "look", "for", "in", "into", "inside", "the", "a", "an", "that", "are", "is", "with", "all", "any", "and", "of",
+     "from", "named", "called", "name", "size", "me", "show", "everything", "stuff", "things", "please", "which", "whose", "to", "here",
+     "this", "these", "those", "ending", "starting", "matching", "containing", "type", "kind", "them", "it", "then"]
+
+# ---------------------------------------------------------------------------
+# 規則。上から順に、最初に当たったものが勝つ。当たらなければ role 無し (= jev 行き)。
+# match の種類はホスト組み込み: regex / prefix / table / builtin(path_like, glob, existing_dir, amount, unit_word)
+# when は追加条件 (prev_role / prev_is_number / not_amount)。
+# ---------------------------------------------------------------------------
+[[rules]]
+# `-perm` `-newer` など、find の語はそのまま通す (`-2h` のような量は除く)
+match = { prefix = "-", min_len = 2 }
+when  = { not_amount = true }
+role  = "passthrough"
+note  = "passed to find untouched"
+
+[[rules]]
+# find の語の直後の数はその引数 (`-perm 644`)
+match = { builtin = "amount" }
+when  = { prev_role = "passthrough", prev_prefix = "-" }
+role  = "passthrough"
+note  = "argument of the previous find word"
+
+[[rules]]
+match = { builtin = "path_like" }      # . .. ~ /x ./x ../x ~/x
+role  = "path"
+
+[[rules]]
+match = { builtin = "glob" }           # * ? [..]
+role  = "name_pattern"
+
+[[rules]]
+match = { table = "types" }
+role  = "type"                         # fixed = 表のキー (f/d/l)
+
+[[rules]]
+match = { table = "actions" }
+role  = "action"
+
+[[rules]]
+match = { word = "empty" }
+role  = "empty"
+
+[[rules]]
+match = { table = "exclude_markers" }
+role  = "exclude_marker"
+
+[[rules]]
+match = { table = "depth_markers" }
+role  = "depth_marker"
+
+[[rules]]
+match = { word = "today" }
+role  = "time_amount"
+amount = { n = 1, unit = "days", at_least = false }
+note  = "within the last day"
+
+[[rules]]
+# `7 days`: 数の直後の単位語
+match = { builtin = "unit_word" }
+when  = { prev_is_number = true }
+role  = "unit"                         # fixed = 単位キー
+
+[[rules]]
+# `older than a week` / `within an hour`: 数の無い単位は 1。向きは jev に聞く (questions.at_least が拾う)
+match = { builtin = "unit_word" }
+role  = "by_dimension"                 # time → time_amount, size → size_amount
+amount = { n = 1, unit = "$unit" }
+note  = "no number, taken as 1"
+
+[[rules]]
+# 向きと単位が両方ある (`+7d` `>10M`) ときだけ確定。`7d` や `7` は amount を持ったまま jev へ
+match = { builtin = "amount" }
+when  = { has_unit = true, has_direction = true }
+role  = "by_dimension"
+
+[[rules]]
+match = { builtin = "amount" }         # 役割は付けない。amount だけ持たせる
+role  = "unresolved"
+
+[[rules]]
+match = { table = "qualifiers" }
+role  = "qualifier"
+
+[[rules]]
+match = { table = "noise" }
+role  = "noise"
+
+[[rules]]
+match = { builtin = "existing_dir" }   # `src` のような裸の名前が実在ディレクトリなら path
+role  = "path"
+note  = "existing directory"
+tag   = "existing_dir"                 # repair.claim で「見た目がパスでない path」を区別する
+
+# ---------------------------------------------------------------------------
+# jev への追加質問 (role.i 以外)。when が当たる語ごとに 1 問。
+# ---------------------------------------------------------------------------
+[[questions]]
+key  = "unit"
+kind = "choice"
+when = { has_amount = true, unit_missing = true, next_role_not = "unit", resolved = false }
+ask  = "If `tokens[{i}]` (\"{w}\") is an age or a size, which unit do the surrounding words imply?"
+choices = "amount_units"               # 全単位キー + none
+none = "A plain count (a depth), no unit"
+
+[[questions]]
+key  = "at_least"
+kind = "noul"
+when = { has_amount = true, direction_missing = true }   # resolved でも聞く (`a week`)
+ask  = """Does `tokens[{i}]` (\"{w}\") mean AT LEAST this much (older than / more than / larger than / over), \
+rather than AT MOST (within the last / less than / smaller than / under)?"""
+
+[[questions]]
+key  = "type_typo"
+kind = "choice"
+when = { resolved = false, alphabetic = true, max_len = 20 }
+ask  = "If `tokens[{i}]` (\"{w}\") is a misspelled entry type word, which one was intended?"
+choices = "table:types"                # 表の語 (1 文字のものは除く) + none
+min_choice_len = 2
+none = "Not an entry type"
+applies_to = "type"                    # jev が role=type と言ったとき、表に無ければこの答えを fixed にする
+
+[[questions]]
+key  = "action_typo"
+kind = "choice"
+when = { resolved = false, alphabetic = true, max_len = 20 }
+ask  = "If `tokens[{i}]` (\"{w}\") is a misspelled action word, which one was intended?"
+choices = "table:actions"
+none = "Not an action"
+applies_to = "action"
+
+# ---------------------------------------------------------------------------
+# repair。jev の答えは語ごとに独立なので、隣接関係をここで直す。上から順に適用。
+# プリミティブはホスト組み込み: attach_unit / claim
+# ---------------------------------------------------------------------------
+[[repair]]
+op = "attach_unit"                     # unit の語を直前の amount に付ける。次元が違えば役割を単位側に直す (conf は max 0.8)
+unit_role = "unit"
+amount_roles = ["time_amount", "size_amount", "depth"]
+
+[[repair]]
+op = "claim"                           # depth_marker の隣の「単位なしの数」を depth にする
+marker = "depth_marker"
+role = "depth"
+side = "both"                          # 後ろを先に見る
+many = false
+from = ["time_amount", "size_amount", "depth", "unresolved"]
+require = { amount_without_unit = true }
+clear = ["unit", "direction"]
+
+[[repair]]
+op = "claim"                           # except の後ろに続く名前は除外。noise は跨ぐ
+marker = "exclude_marker"
+role = "exclude"
+side = "after"
+many = true
+from = ["name_pattern", "extension", "name_word", "exclude", { role = "path", tag = "existing_dir" }]
+skip = ["noise"]
+
+# ---------------------------------------------------------------------------
+# 実行。assemble.sh が argv を作る。危険な action の扱いはホスト側で共通。
+# ---------------------------------------------------------------------------
+[assemble]
+script = "assemble.sh"                 # stdin: {tokens, passthrough, defaults} / stdout: {argv, preview, dangerous, postprocess}
+
+[confirm]
+# assemble が dangerous=true を返したら: -y でも必ず確認、既定 No、preview argv を先に回して最大 10 件見せる
+preview_lines = 10
