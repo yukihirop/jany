@@ -11,6 +11,9 @@
   <b>jany</b> turns a loose pile of words — out of order, half-remembered, misspelled — into the command line you meant, and puts it on your prompt. <b>It never runs it.</b> Enter is yours.
 </p>
 
+> [!NOTE]
+> **Status: experimental.** The command definitions and shell integrations may change before 1.0.
+
 <p align="center">
   <img src="docs/demo.svg" alt="Terminal demo: 'find log files older than 7 days in logs delete --explain' showing the per-word table, the read-only preview of what would be deleted, then the find landing on the next prompt; 'curl psot localhsot 3000 users first_name amanda' becoming a POST with a JSON body; 'docker run nginx 8080:80 background named web'; 'tar extrct app.tar.gz into dist strip 1' listing the archive first" width="930">
 </p>
