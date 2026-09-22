@@ -3,10 +3,10 @@
 #
 # stdin : {"tokens":[{"text","role","value","amount":{"n","unit","at_least"}|null}], "passthrough":[...], "answers":{}, "defaults":{"args":[...]}}
 #         tokens はすべて role が付いている (未解決はホストが弾く)。confidence はホストが min を取るのでここでは見ない。
-# stdout: {"argv":[...], "preview":[...]|null, "risk":"none"|"dangerous", "postprocess":"count_lines"|null, "error":"..."|null}
+# stdout: {"argv":[...], "preview":[...]|null, "risk":"none"|"dangerous", "pipe":[...]|null, "error":"..."|null}
 #
 # preview   = 実行前に見せる用の argv (delete なら -delete 抜き)。risk="dangerous" のときホストが先に回して最大 N 件見せる。
-# postprocess = count なら find の出力行数をホストが数えて表示する。
+# pipe      = count なら ["wc","-l"]。ホストは実行しないので `find … | wc -l` として入力行に載せる (決定 2026-09-22)。
 set -euo pipefail
 
 jq -c '
@@ -78,7 +78,7 @@ jq -c '
           argv:        ($base + $tail + (if $action == "delete" then ["-delete"] else [] end)),
           preview:     (if $action == "delete" then ($base + $tail) else null end),
           risk:        (if $action == "delete" then "dangerous" else "none" end),
-          postprocess: (if $action == "count" then "count_lines" else null end),
+          pipe:        (if $action == "count" then ["wc", "-l"] else null end),
           error:       null
         }
     end

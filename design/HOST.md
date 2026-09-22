@@ -17,9 +17,9 @@ jind 0.1.0 を `design/find/`、jurl 0.1.2 を `design/curl/` の 3 ファイル
 | 質問ビルダ | `role.i` (jev=あり の roles 全部) + `[[questions]]` の when が当たる語ごとに 1 問。`{i}` `{w}` `{prev_i}` `{prev_w}` を埋める。when: `resolved / regex / has_amount / … / prev_any = [{…}]`。`scope = "command"` なら語ごとでなく 1 問 (curl の get_intent)。state.tokens は role の `mask` で置き換える。`[jev.state]` で `value_of = "<role>"` を足せる | jind `prompt::build`、jurl `prompt::build` |
 | 答えの書き戻し | `role.i` → role/confidence/probs。`applies_to` のある typo 質問は表に無い語の fixed に (`none_conf` で none のとき confidence を落とす)。`sets = { tag }` は noul > 0.5 でタグ。amount 役割には unit/at_least を書く。command scope の答えは `answers` に残して repair / assemble へ | jind `prompt::apply`、jurl `prompt::apply` |
 | repair プリミティブ | `attach_unit`、`claim {marker, role, side, many, from, skip, require, clear}`、`join {answer, sep, into}` (noul 答えで前の語に結合、後ろから、連鎖あり)、`pair {members, key_probs, value_probs, key_role, value_role, key_role_if}` (交互配置を尤度で選ぶ) | jind `repair.rs`、jurl `repair::merge_joined` / `pair_key_values` |
-| assemble 呼び出し | stdin に `{tokens, passthrough, answers, defaults}` (`defaults` は schema `[defaults]` を user config で上書きした object)、stdout の `{argv, preview, risk, postprocess, error}` を読む。confidence の min はホストが取る | jind `assemble.rs` + `find.rs` の外側、jurl `assemble.rs` + `curl::argv` |
-| 確認フロー | `reject_below` / `confirm_below` / `-y`。`risk = "dangerous"` なら `-y` でも確認・既定 No・preview を先に回して `preview_lines` 件見せる。`risk = "unsafe"` なら閾値だけ `confirm_below_unsafe` に上げる (-y は効く) | jind `main.rs execute`、jurl `main.rs execute` |
-| postprocess | `count_lines` | jind `Action::Count` |
+| assemble 呼び出し | stdin に `{tokens, passthrough, answers, defaults}` (`defaults` は schema `[defaults]` を user config で上書きした object)、stdout の `{argv, preview, risk, pipe, error}` を読む。confidence の min はホストが取る | jind `assemble.rs` + `find.rs` の外側、jurl `assemble.rs` + `curl::argv` |
+| 出力 | **jx はコマンドを実行しない** (決定 2026-09-22)。`argv` (+ `pipe` があれば `\| wc -l`) を shell-quote した 1 行を stdout に出す。`eval "$(jx init zsh)"` が定義する関数がそれをシェルの入力行に置く (zsh `print -z`、fish `commandline -r`、bash は `bind '"\e[0n": …'; printf '\e[5n'` のトリック: 手元で未確認)。説明表・jev の行・エラーは stderr。`reject_below` 未満は stdout に出さず exit 非 0。`risk = "dangerous"` かつ schema `preview_readonly = true` なら preview argv を jx が回して `preview_lines` 件を stderr に見せる (read-only の実行だけ例外)。`risk = "unsafe"` は `unsafe_note` を stderr に一言。`-y` / `confirm_below` / `[Y/n/e]` / `$EDITOR` は無い (入力行そのものが確認) | 新規。jind/jurl の `execute` は持ち越さない |
+| `jx init <shell>` | ラッパー関数を出す | zoxide / fzf と同じ |
 | テストランナー | `jx test <name>`: cases.toml を Mock Oracle で回す。`setup.dirs` は一時ディレクトリに作って chdir | jind `interpret.rs` の Mock |
 
 ## schema (コマンドごと、`/jx-register` で LLM が書く)
@@ -43,7 +43,8 @@ jind 0.1.0 を `design/find/`、jurl 0.1.2 を `design/curl/` の 3 ファイル
 - assemble の契約を変えた: `dangerous: bool` → `risk: "none" | "unsafe" | "dangerous"` (jurl の PUT/PATCH/DELETE は「-y は効くが閾値が 0.9」で find の delete とは違う)、`defaults: [...]` → `defaults: {args, …}` (curl は `content_type` も要る)、`answers` を追加。find の 3 ファイルも合わせて直した
 - assemble.sh は bash + jq 120 行。jurl の `-n --no-jev` 実出力 16 本 + interpret.rs / EXAMPLES の jev 例 7 本で同じ argv (scratch のハーネスで確認)
 - **jx の規則が jurl と違うところ 1 つ**: `http://example.com/x?a=1` は jurl 0.1.2 だと `=` 分岐が URL より先に当たって未解決になる (実機で確認)。jx は `=` の左がボディのパス形のときだけ field にするので URL として通る。cases.toml に書いた
-- **jurl の出力側は jx に持ち込まない** (決定 2026-09-22): `-w` のステータス行、TTY のときの `-i` + ヘッダ / JSON の色付け (`output::print_response`)。jx は argv を実行して stdout をそのまま出す。整形は `| jq`
+- **jurl の出力側は jx に持ち込まない** (決定 2026-09-22): `-w` のステータス行、TTY のときの `-i` + ヘッダ / JSON の色付け (`output::print_response`)。整形は `| jq`
+- **jx は実行しない** (決定 2026-09-22、ユーザー): 未知のコマンドを扱うので、Y のあとに spawn するのではなくシェルの入力行に置いて Enter は人が押す。これで `-y` / `confirm_below` / `e` が消え、`postprocess = "count_lines"` は `pipe = ["wc", "-l"]` に変わった。preview (find delete) だけ read-only の実行として残す
 
 ## まだ確かめていないこと
 

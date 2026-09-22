@@ -295,11 +295,13 @@ from = ["name_pattern", "extension", "name_word", "exclude", { role = "path", ta
 skip = ["noise"]
 
 # ---------------------------------------------------------------------------
-# 実行。assemble.sh が argv を作る。危険な action の扱いはホスト側で共通。
+# 組み立て。assemble.sh が argv を作る。ホストは実行せず、シェルの入力行に置く。
 # ---------------------------------------------------------------------------
 [assemble]
-script = "assemble.sh"                 # stdin: {tokens, passthrough, defaults} / stdout: {argv, preview, dangerous, postprocess}
+script = "assemble.sh"                 # stdin: {tokens, passthrough, answers, defaults} / stdout: {argv, preview, risk, pipe, error}
 
 [confirm]
-# assemble が dangerous=true を返したら: -y でも必ず確認、既定 No、preview argv を先に回して最大 10 件見せる
+# jx はコマンドを実行せずシェルの入力行に置く (決定 2026-09-22)。Enter を押すのは人。
+# risk = "dangerous" のときだけ、read-only な preview argv を jx が先に回して最大 10 件を stderr に見せる。
+preview_readonly = true                # preview は副作用が無いと assemble の書き手が明示する。無ければ preview を回さない
 preview_lines = 10

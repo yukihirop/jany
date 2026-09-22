@@ -33,13 +33,13 @@ jind(jev × find、`../jind`)と jurl(jev × curl、`../jurl`)を汎化した 1 
 - ホスト組み込みの match: `prefix / word / table / builtin(path_like, glob, existing_dir, amount, unit_word)`、when: `prev_role / prev_is_number / not_amount / has_unit / has_direction`
 - repair プリミティブ: `attach_unit`、`claim {marker, role, side, many, from, skip, require, clear}`。jind の 3 本はこれで書けた
 - `risk = "dangerous"` を assemble が返したら `-y` でも必ず確認・既定 No・`preview` argv を先に回して `preview_lines` 件見せる(jind の delete の安全弁を一般化したもの)。`risk = "unsafe"`(jurl の PUT/PATCH/DELETE)は閾値を `confirm_below_unsafe` に上げるだけで `-y` は効く
-- `postprocess = "count_lines"`(jind の `count`)
+- **jx はコマンドを実行しない**(決定 2026-09-22、ユーザー): 未知のコマンドを扱うので、Y の後に spawn せず、shell-quote した 1 行を stdout に出し、`eval "$(jx init zsh)"` のラッパー(`print -z`)がシェルの入力行に置く。Enter は人が押す。`-y` / `confirm_below` / `[Y/n/e]` / `$EDITOR` は無し、`reject_below` だけ残す。`postprocess = "count_lines"` は `pipe = ["wc", "-l"]` に(`find … | wc -l` を入力行に載せる)。`risk = "dangerous"` の preview だけ read-only の実行として残す(schema に `preview_readonly = true` を書かせる)。詳細は `design/HOST.md`「出力」行
 
 ## 次にやること
 
 1. ~~jurl を `design/curl/` に書き直す~~ 済(2026-09-22)。予想どおり `pair` / `join` の 2 プリミティブ、2 語規則は `next`、have_method/have_url は `once`、Header は role の `mask` で表した
 2. ~~jurl の出力側を jx に持ち込むか~~ 決定(2026-09-22、ユーザー): **持ち込まない**。jx curl は curl の argv を作って実行し stdout をそのまま出す。整形は `| jq`。jurl 本体は残るので機能が消えるわけではない
-3. DSL が固まったら Rust ホストを書く。`cargo init`、jind/jurl から共通ファイルをコピー、`design/find` と `design/curl` の cases が通るまで。regex は regex crate、TOML は toml crate
+3. DSL が固まったら Rust ホストを書く。`cargo init`、jind/jurl から共通ファイルをコピー(`main.rs` の `execute` と `output.rs` の確認 UI は持ち越さない)、`design/find` と `design/curl` の cases が通るまで。regex は regex crate、TOML は toml crate、クォートは shell_words。`jx init zsh|bash|fish` も書く(bash のトリックは実機で確かめる)
 4. `/jx-register` スキルを書き、docker run で LLM 生成を試す
 
 ## 分かっていること・注意

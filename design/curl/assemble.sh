@@ -5,9 +5,9 @@
 #          "defaults":{"content_type":"application/json","args":[...]}}
 #         tokens はすべて role が付いている。value は fixed があればそれ、無ければ text (ホストが埋める)。
 #         repair.pair 済みなので field_key の次は field_value、裸の query の次も field_value。
-# stdout: {"argv":[...], "preview":null, "risk":"none"|"unsafe", "postprocess":null, "error":"..."|null}
+# stdout: {"argv":[...], "preview":null, "risk":"none"|"unsafe", "pipe":null, "error":"..."|null}
 #
-# risk = "unsafe" は PUT / PATCH / DELETE (jurl の confirm_below_unsafe)。-y は効く。preview は使わない。
+# risk = "unsafe" は PUT / PATCH / DELETE。ホストは入力行に置く前に stderr に一言注意を出すだけ (実行はしない)。preview は使わない。
 set -euo pipefail
 
 jq -c '
@@ -102,8 +102,8 @@ jq -c '
        ($value_errors[]),
        (if ($t | map(select(.role == "port") | .text | tonumber) | any(. > 65535)) then "port out of range" else empty end)
      ]) as $conflicts
-  | if ($conflicts | length) > 0 then {argv: null, preview: null, risk: "none", postprocess: null, error: ($conflicts | join("; "))}
-    elif ($urls | length) == 0 then {argv: null, preview: null, risk: "none", postprocess: null, error: "no url"}
+  | if ($conflicts | length) > 0 then {argv: null, preview: null, risk: "none", pipe: null, error: ($conflicts | join("; "))}
+    elif ($urls | length) == 0 then {argv: null, preview: null, risk: "none", pipe: null, error: "no url"}
     else
       # --- URL を組む -------------------------------------------------------------------------------
       ($urls[0] | parse_url
@@ -137,7 +137,7 @@ jq -c '
                  + $body_args + (.passthrough // [])),
           preview: null,
           risk: (if ($method | IN("PUT", "PATCH", "DELETE")) then "unsafe" else "none" end),
-          postprocess: null,
+          pipe: null,
           error: null }
     end
 '

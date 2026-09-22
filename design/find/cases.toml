@@ -33,7 +33,7 @@ argv  = ["find", ".", "-iname", "*.rs", "-mmin", "-60"]
 [[case]]
 words = ["empty", "folders", "depth", "2", "count"]
 argv  = ["find", ".", "-maxdepth", "2", "-type", "d", "-empty"]
-postprocess = "count_lines"
+pipe = ["wc", "-l"]
 [case.jev]
 "role.3"    = { choice = "time_amount", confidence = 0.5 }   # jev が間違えても repair.claim が depth に直す
 "unit.3"    = { choice = "none" }

@@ -326,16 +326,18 @@ key_role_if = { role = "query", any = [{ member_role = "query" }, { value_of = "
 # ---------------------------------------------------------------------------
 [assemble]
 script = "assemble.sh"
-# stdin: {tokens, passthrough, answers, defaults} / stdout: {argv, preview, risk, postprocess, error}
+# stdin: {tokens, passthrough, answers, defaults} / stdout: {argv, preview, risk, pipe, error}
 # NEW: answers  = scope="command" の質問の答え ({get_intent: 0.89})。curl は読まない (pair で消化済み) が契約として渡す
 # NEW: defaults = 下の [defaults] を user config で上書きしたもの (find の `defaults` 配列は `defaults.args` に)
 # NEW: risk     = "none" | "unsafe" | "dangerous"。find の dangerous=true は risk="dangerous" に
+# NEW: pipe     = 実行結果に繋ぐコマンド (find の count は ["wc","-l"])。curl は使わない
 
 [defaults]
 content_type = "application/json"        # ボディがあって Content-Type 未指定のとき
 args = []                                # jurl の defaults.curl_args。`curl -sS` の直後に入る
 
 [confirm]
-preview_lines = 10                       # risk = "dangerous" のとき (curl は使わない)
-# risk = "unsafe" (PUT/PATCH/DELETE): -y は効く。confirm_below の代わりに confirm_below_unsafe (既定 0.9) を使う
-confirm_below_unsafe = 0.9
+# jx は実行せずシェルの入力行に置く (決定 2026-09-22)。curl に preview は無い。
+# risk = "unsafe" (PUT/PATCH/DELETE) は入力行に置く前に stderr に「取り消せないメソッド」と一言出すだけ。
+# jurl の confirm_below / confirm_below_unsafe / -y / e は無くなった (入力行そのものが確認)。reject_below だけ残る。
+unsafe_note = "this method cannot be undone"
