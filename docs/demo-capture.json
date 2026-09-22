@@ -1,0 +1,22 @@
+[
+ {
+  "cmd": "jany find log files older than 7 days in logs delete --explain",
+  "err": "\u001b[2mword    role        conf  by    note\u001b[0m\r\nlog     \u001b[32mextension\u001b[0m   \u001b[33m0.58\u001b[0m  \u001b[34mjev \u001b[0m  \u001b[2mextension 0.62, name_word 0.20\u001b[0m\r\nfiles   \u001b[36mtype\u001b[0m        \u001b[32m1.00\u001b[0m  \u001b[2mrule\u001b[0m  \u001b[2m→ f\u001b[0m\r\nolder   \u001b[36mqualifier\u001b[0m   \u001b[32m1.00\u001b[0m  \u001b[2mrule\u001b[0m  \u001b[2m\u001b[0m\r\nthan    \u001b[36mqualifier\u001b[0m   \u001b[32m1.00\u001b[0m  \u001b[2mrule\u001b[0m  \u001b[2m\u001b[0m\r\n7       \u001b[32mtime_amount\u001b[0m \u001b[32m0.92\u001b[0m  \u001b[34mjev \u001b[0m  \u001b[2m≥ 7 days; at least p=0.92; time_amount 1.00, action 0.00\u001b[0m\r\ndays    \u001b[36munit\u001b[0m        \u001b[32m1.00\u001b[0m  \u001b[2mrule\u001b[0m  \u001b[2m\u001b[0m\r\nin      \u001b[36mnoise\u001b[0m       \u001b[32m1.00\u001b[0m  \u001b[2mrule\u001b[0m  \u001b[2m\u001b[0m\r\nlogs    \u001b[36mpath\u001b[0m        \u001b[32m1.00\u001b[0m  \u001b[2mrule\u001b[0m  \u001b[2mexisting directory\u001b[0m\r\ndelete  \u001b[36maction\u001b[0m      \u001b[32m1.00\u001b[0m  \u001b[2mrule\u001b[0m  \u001b[2m\u001b[0m\r\n\u001b[2mjev: typesafe/jev-1.13-20260917 · 5 questions · 303 ms · 1820 in / 510 out tokens · $0.000076\u001b[0m\r\n\u001b[33mconfidence 0.58: check the command before you run it\u001b[0m\r\n\u001b[31mthis command is destructive.\u001b[0m\r\n\u001b[2m$ find logs -type f -iname '*.log' -mtime +7\u001b[0m\r\n  logs/old-access.log\r\n  logs/kernel.log\r\n  logs/system.log\r\n  logs/wifi.log\r\n  logs/install.log\r\n",
+  "line": "find logs -type f -iname '*.log' -mtime +7 -delete"
+ },
+ {
+  "cmd": "jany curl psot localhsot 3000 users first_name amanda",
+  "err": "\u001b[2mjev: typesafe/jev-1.13-20260917 · 31 questions · 303 ms · 4926 in / 1890 out tokens · $0.000207\u001b[0m\r\n",
+  "line": "curl -sS -X POST http://localhost:3000/users -H 'Content-Type: application/json' -H 'Accept: application/json' --data '{\"first_name\":\"amanda\"}'"
+ },
+ {
+  "cmd": "jany docker run nginx 8080:80 background named web",
+  "err": "\u001b[2mjev: typesafe/jev-1.13-20260917 · 2 questions · 212 ms · 1141 in / 326 out tokens · $0.000048\u001b[0m\r\n",
+  "line": "docker run -d --name web -p 8080:80 nginx"
+ },
+ {
+  "cmd": "jany tar extrct app.tar.gz into dist strip 1",
+  "err": "\u001b[2mjev: typesafe/jev-1.13-20260917 · 3 questions · 223 ms · 1735 in / 549 out tokens · $0.000073\u001b[0m\r\n\u001b[31mthis command is destructive.\u001b[0m\r\n\u001b[2m$ tar -tf app.tar.gz\u001b[0m\r\n  app/\r\n  app/README.md\r\n  app/src/\r\n  app/src/main.rs\r\n",
+  "line": "tar -xf app.tar.gz --strip-components 1 -C dist"
+ }
+]

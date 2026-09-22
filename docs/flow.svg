@@ -1,0 +1,67 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="880" height="160" viewBox="0 0 880 160" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="13">
+  <defs>
+    <marker id="a" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M0,0 L10,5 L0,10 z" fill="#66706e"/>
+    </marker>
+  </defs>
+  <style>
+    .box{fill:#ffffff;stroke:#d9ded9;stroke-width:1.2}
+    .jev{stroke:#3b6fd1;stroke-width:2}
+    .sch{stroke-dasharray:4 3}
+    .t{fill:#1b1f1e}
+    .m{fill:#66706e;font-size:11px}
+    .l{stroke:#66706e;stroke-width:1.6;fill:none}
+    @media (prefers-color-scheme: dark){
+      .box{fill:#181d24;stroke:#2c3648}
+      .jev{stroke:#7aa2f7}
+      .t{fill:#e6eaef}
+      .m{fill:#9aa3b2}
+    }
+  </style>
+
+  <rect class="box" x="16" y="40" width="80" height="44" rx="8"/>
+  <text class="t" x="56" y="66" text-anchor="middle">words</text>
+
+  <path class="l" d="M96,62 L124,62" marker-end="url(#a)"/>
+
+  <rect class="box sch" x="124" y="40" width="150" height="44" rx="8"/>
+  <text class="t" x="199" y="60" text-anchor="middle">rules</text>
+  <text class="m" x="199" y="76" text-anchor="middle">schema.toml</text>
+
+  <path class="l" d="M274,62 L306,62" marker-end="url(#a)"/>
+
+  <rect class="box" x="306" y="40" width="120" height="44" rx="8"/>
+  <text class="t" x="366" y="66" text-anchor="middle">all resolved?</text>
+
+  <!-- yes: straight to assemble -->
+  <path class="l" d="M426,52 L620,52" marker-end="url(#a)"/>
+  <text class="m" x="523" y="46" text-anchor="middle">yes · offline</text>
+
+  <!-- no: down through jev and repair -->
+  <path class="l" d="M366,84 L366,112 L428,112" marker-end="url(#a)"/>
+  <text class="m" x="380" y="104">no</text>
+
+  <rect class="box jev" x="428" y="90" width="96" height="44" rx="8"/>
+  <text class="t" x="476" y="110" text-anchor="middle">jev</text>
+  <text class="m" x="476" y="126" text-anchor="middle">one request</text>
+
+  <path class="l" d="M524,112 L544,112" marker-end="url(#a)"/>
+
+  <rect class="box sch" x="544" y="90" width="76" height="44" rx="8"/>
+  <text class="t" x="582" y="110" text-anchor="middle">repair</text>
+  <text class="m" x="582" y="126" text-anchor="middle">7 + days</text>
+
+  <path class="l" d="M620,112 L640,112 L640,74" marker-end="url(#a)"/>
+
+  <rect class="box sch" x="620" y="30" width="110" height="44" rx="8"/>
+  <text class="t" x="675" y="50" text-anchor="middle">assemble.sh</text>
+  <text class="m" x="675" y="66" text-anchor="middle">argv · risk</text>
+
+  <path class="l" d="M730,52 L756,52" marker-end="url(#a)"/>
+
+  <rect class="box" x="756" y="30" width="108" height="44" rx="8"/>
+  <text class="t" x="810" y="50" text-anchor="middle">your prompt</text>
+  <text class="m" x="810" y="66" text-anchor="middle">never run by jany</text>
+
+  <text class="m" x="16" y="150">dashed = per-command definition in ~/.config/jany/cmd/&lt;name&gt;/ · solid = the host</text>
+</svg>

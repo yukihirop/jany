@@ -1,30 +1,43 @@
 <p align="center">
-  <b>jany</b> — jev × any command. Say what you want, in any order. Get the command line you meant, on your prompt.
+  <img src="docs/hero.svg" alt="jany — jev × any command. Say what you want, in any order. Get the command you meant, on your prompt." width="880">
 </p>
 
 <p align="center">
   <a href="LICENSE"><img src="https://img.shields.io/badge/license-MIT-blue.svg" alt="MIT"></a>
+  <img src="https://img.shields.io/badge/commands-find%20%C2%B7%20curl%20%C2%B7%20docker%20run%20%C2%B7%20yours-3b6fd1.svg" alt="find · curl · docker run · yours">
+</p>
+
+<p align="center">
+  <b>jany</b> turns a loose pile of words — out of order, half-remembered, misspelled — into the command line you meant, and puts it on your prompt. <b>It never runs it.</b> Enter is yours.
+</p>
+
+<p align="center">
+  <img src="docs/demo.svg" alt="Terminal demo: 'find log files older than 7 days in logs delete --explain' showing the per-word table, the read-only preview of what would be deleted, then the find landing on the next prompt; 'curl psot localhsot 3000 users first_name amanda' becoming a POST with a JSON body; 'docker run nginx 8080:80 background named web'; 'tar extrct app.tar.gz into dist strip 1' listing the archive first" width="930">
 </p>
 
 ```sh
-$ jany find log files older than 7 days in /var/log delete
+$ jany find log files older than 7 days in logs delete
 this command is destructive.
-$ find /var/log -type f -iname '*.log' -mtime +7
-  /var/log/system.log.3
-  /var/log/install.log.1
-  … 40 more
+$ find logs -type f -iname '*.log' -mtime +7
+  logs/old-access.log
+  logs/kernel.log
+  logs/system.log
+  … 2 more
 
-$ find /var/log -type f -iname '*.log' -mtime +7 -delete█
+$ find logs -type f -iname '*.log' -mtime +7 -delete█
 ```
 
-The last line is not output. It is your **next prompt, already filled in**. jany never runs anything: it prints one shell-quoted line, and the wrapper from `jany --init zsh` puts it on the command line. You read it, edit it if you like, and press Enter.
+The last line is not output. It is your **next prompt, already filled in**. jany prints one shell-quoted line on stdout, and the wrapper from `jany --init zsh` puts it on the command line. Read it, edit it if you like, press Enter.
 
 ```sh
-$ jany curl psot localhsot 3000 users first_name amanda
+$ jany curl psot localhsot 3000 users first_name amanda      # typos, a bare port, key value as two words
 $ curl -sS -X POST http://localhost:3000/users -H 'Content-Type: application/json' -H 'Accept: application/json' --data '{"first_name":"amanda"}'
 
 $ jany docker run nginx 8080:80 background named web
 $ docker run -d --name web -p 8080:80 nginx
+
+$ jany tar extrct app.tar.gz into dist strip 1                # a definition written by the /jany-register skill
+$ tar -xf app.tar.gz --strip-components 1 -C dist
 
 $ jany find empty folders depth 2 count
 $ find . -maxdepth 2 -type d -empty | wc -l
@@ -34,12 +47,9 @@ jany generalises [jind](https://github.com/yukihirop/jind) (jev × find) and [ju
 
 ## How it works
 
-```
-words ──► rules ──► all resolved? ──yes──► assemble.sh ──► one line on stdout ──► your prompt
-                        │ no
-                        ▼
-                  jev (one request) ──► repair ──┘
-```
+<p align="center">
+  <img src="docs/flow.svg" alt="words → rules → all resolved? yes: assemble.sh → your prompt. no: jev (one request) → repair → assemble.sh → your prompt. Dashed boxes are the per-command definition, solid ones the host." width="880">
+</p>
 
 - **rules** — the unambiguous shapes are decided by data in `schema.toml`: paths, globs, `8080:80`, `KEY=value`, `+7d`, `>10M`, table words like `files`/`delete`/`background`. If every word resolves, jany never leaves your machine.
 - **jev** — anything left over goes to [jev](https://openrouter.ai) (TypeSafe System One, via OpenRouter) in **one request**: "what is the role of each word?" plus the extra questions the schema declares (which unit? at least or at most? a typo of which table word?). jev only picks from fixed choices and returns probabilities; it never generates the command.
@@ -125,4 +135,4 @@ dl = "~/Downloads"
 
 ---
 
-<p align="center"><sub><code>examples/</code> holds the built-in definitions and <code>docs/HOST.md</code> the line between what the host does and what a schema does. Each module in <code>src/</code> starts with a comment on what it does. The jev wire format follows eg-jev's <code>packages/recipes/src/lib/{openrouter,questions}.ts</code>.</sub></p>
+<p align="center"><sub>Sister projects: <a href="https://github.com/yukihirop/jind">jind</a> (jev × find) and <a href="https://github.com/yukihirop/jurl">jurl</a> (jev × curl) — jany is their generalisation. <code>examples/</code> holds the built-in definitions and <code>docs/HOST.md</code> the line between what the host does and what a schema does. Each module in <code>src/</code> starts with a comment on what it does. <code>docs/demo.svg</code> is real output captured through a pty by <code>docs/capture-demo.py</code> and rendered by <code>docs/make-demo.py</code>. The jev wire format follows eg-jev's <code>packages/recipes/src/lib/{openrouter,questions}.ts</code>.</sub></p>

@@ -1,0 +1,57 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="880" height="230" viewBox="0 0 880 230" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#141a24"/>
+      <stop offset="1" stop-color="#1b2433"/>
+    </linearGradient>
+    <linearGradient id="accent" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0" stop-color="#7aa2f7"/>
+      <stop offset="1" stop-color="#7ed6d4"/>
+    </linearGradient>
+    <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse">
+      <path d="M0,0 L10,5 L0,10 z" fill="#7aa2f7"/>
+    </marker>
+  </defs>
+  <rect width="880" height="230" rx="14" fill="url(#bg)"/>
+
+  <!-- wordmark -->
+  <text x="40" y="92" font-size="64" font-weight="700" fill="url(#accent)" letter-spacing="-2">jany</text>
+  <text x="40" y="126" font-size="17" fill="#9aa3b2">jev × any command</text>
+  <text x="40" y="166" font-size="14" fill="#cdd3dc">Say what you want, in any order.</text>
+  <text x="40" y="188" font-size="14" fill="#cdd3dc">Get the command you meant, on your prompt.</text>
+
+  <!-- scattered words: find / curl / docker run -->
+  <g font-size="13" fill="#e6eaef">
+    <rect x="380" y="40" width="36" height="24" rx="6" fill="#243046"/><text x="386" y="57" textLength="24" lengthAdjust="spacingAndGlyphs">log</text>
+    <rect x="424" y="40" width="52" height="24" rx="6" fill="#243046"/><text x="430" y="57" textLength="40" lengthAdjust="spacingAndGlyphs">files</text>
+    <rect x="484" y="40" width="92" height="24" rx="6" fill="#243046"/><text x="490" y="57" textLength="80" lengthAdjust="spacingAndGlyphs">older than</text>
+    <rect x="584" y="40" width="60" height="24" rx="6" fill="#243046"/><text x="590" y="57" textLength="48" lengthAdjust="spacingAndGlyphs">7 days</text>
+    <rect x="380" y="74" width="44" height="24" rx="6" fill="#243046"/><text x="386" y="91" textLength="32" lengthAdjust="spacingAndGlyphs">psot</text>
+    <rect x="432" y="74" width="84" height="24" rx="6" fill="#243046"/><text x="438" y="91" textLength="72" lengthAdjust="spacingAndGlyphs">localhsot</text>
+    <rect x="524" y="74" width="44" height="24" rx="6" fill="#243046"/><text x="530" y="91" textLength="32" lengthAdjust="spacingAndGlyphs">3000</text>
+    <rect x="576" y="74" width="52" height="24" rx="6" fill="#243046"/><text x="582" y="91" textLength="40" lengthAdjust="spacingAndGlyphs">users</text>
+    <rect x="380" y="108" width="52" height="24" rx="6" fill="#243046"/><text x="386" y="125" textLength="40" lengthAdjust="spacingAndGlyphs">nginx</text>
+    <rect x="440" y="108" width="68" height="24" rx="6" fill="#243046"/><text x="446" y="125" textLength="56" lengthAdjust="spacingAndGlyphs">8080:80</text>
+    <rect x="516" y="108" width="92" height="24" rx="6" fill="#243046"/><text x="522" y="125" textLength="80" lengthAdjust="spacingAndGlyphs">background</text>
+    <rect x="380" y="142" width="60" height="24" rx="6" fill="#243046"/><text x="386" y="159" textLength="48" lengthAdjust="spacingAndGlyphs">extrct</text>
+    <rect x="448" y="142" width="92" height="24" rx="6" fill="#243046"/><text x="454" y="159" textLength="80" lengthAdjust="spacingAndGlyphs">app.tar.gz</text>
+    <rect x="548" y="142" width="84" height="24" rx="6" fill="#243046"/><text x="554" y="159" textLength="72" lengthAdjust="spacingAndGlyphs">into dist</text>
+  </g>
+  <text x="380" y="200" font-size="11" fill="#6f7a8c">find · curl · docker run · tar · anything you register</text>
+
+  <!-- arrow -->
+  <path d="M660,104 L684,104" stroke="#7aa2f7" stroke-width="2.5" marker-end="url(#arrow)"/>
+  <text x="660" y="92" font-size="11" fill="#7aa2f7">jev</text>
+
+  <!-- your prompt -->
+  <g font-size="12" fill="#e6eaef">
+    <rect x="692" y="36" width="172" height="150" rx="8" fill="#0e131b" stroke="#2c3648"/>
+    <text x="704" y="58" fill="#9aa3b2" font-size="11">your next prompt</text>
+    <text x="704" y="84" xml:space="preserve"><tspan fill="#6f7a8c">$ </tspan><tspan fill="#8fd9be">find</tspan> logs \</text>
+    <text x="718" y="102"><tspan fill="#7ed6d4">-type</tspan> f \</text>
+    <text x="718" y="120" textLength="120" lengthAdjust="spacingAndGlyphs"><tspan fill="#7ed6d4">-iname</tspan> '*.log' \</text>
+    <text x="718" y="138"><tspan fill="#7ed6d4">-mtime</tspan> <tspan fill="#f0c96a">+7</tspan> \</text>
+    <text x="718" y="156"><tspan fill="#f07178">-delete</tspan><tspan fill="#e6eaef">█</tspan></text>
+    <text x="704" y="178" fill="#6f7a8c" font-size="11">Enter is yours.</text>
+  </g>
+</svg>
