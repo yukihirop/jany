@@ -10,7 +10,7 @@ jany は「崩れた語の並び → 1 本のコマンド行」を、コマン�
 
 - DSL の全キーと assemble の契約: [reference.md](reference.md)(**必ず先に読む**。schema は未知のキーをエラーにする)
 - 実例: `examples/find/`(jind 相当。amount・claim・dangerous/preview・pipe)、`examples/curl/`(jurl 相当。next・once・regex・join・pair・mask・scope=command)
-- 置き場所: `~/.config/jany/cmd/<name>[/<sub>]/`(`JANY_CMD_DIR` があればそこ)。`jany --register <name> [sub]` が雛形を置く
+- 置き場所: `~/.config/jany/cmd/<name>[/<sub>]/`(`JANY_CMD_DIR` があればそこ)。このスキル自身が雛形を作る
 
 ## 手順
 
@@ -19,15 +19,15 @@ jany は「崩れた語の並び → 1 本のコマンド行」を、コマン�
 - `<name>` のバイナリの `--help` / man を読み、**よく使うオプション 8 割**を選ぶ。全部は載せない(jind が `-mtime` だけに割り切ったのと同じ)。載せないものは `--` の後ろに素通しする
 - 役割集合が閉じないもの(任意の SQL 文、jq の式、ffmpeg のフィルタ)は対象外。無理に役割にしない
 - 実際に打ちそうな語の並びを **10 本以上**書き出す。崩れ方(語順違い、typo、単位の分離、`8080:80` のような結合語)も入れる。これが cases になる
-- サブコマンドがあるなら階層にする: `jany --register docker run` → `cmd/docker/run/`
+- サブコマンドがあるなら階層にする: `/jany-register docker run` → `cmd/docker/run/`
 
 ### 2. 雛形を置く
 
-```
-jany --register <name> [sub]
-```
+`JANY_CMD_DIR` があればそれを、無ければ `~/.config/jany/cmd/` を定義ルートにする。`<name> [sub]` をパス要素として結合し、対象ディレクトリを作る。既存の `schema.toml` がある場合は上書きせず、そこで止める。
 
-3 ファイルの雛形が置かれる。既にあれば上書きしない。
+このスキルの `template/schema.toml`、`template/assemble.sh`、`template/cases.toml` を対象ディレクトリへコピーして雛形にする。`__NAME__` をコマンド名(サブコマンドを空白で結合したもの)、`__ARGV0__` を assemble の argv 先頭の JSON 配列に置換する。`assemble.sh` には実行権限を付ける。ファイル操作は利用環境の通常の編集手段で行ってよい。
+
+`jany --register` は呼ばない。このスキル単体で、雛形作成から定義の完成まで行う。
 
 ### 3. schema.toml を書く
 
@@ -71,4 +71,4 @@ jany --test <name> [sub] --explain      # 語ごとの役割表を見る
 
 - 事実と推測を分ける。バイナリのオプション名は `--help` に当てる。確かめていないことは「確かめていない」と書く
 - 頼まれていないコマンドまで登録しない
-- `~/.config/jany/cmd/` の既存定義を上書きしない(`jany --register` は既存があれば止まる)
+- `~/.config/jany/cmd/` の既存定義を上書きしない。既存の `schema.toml` があれば、変更せずにユーザーへ報告する

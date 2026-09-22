@@ -3,7 +3,10 @@
 </p>
 
 <p align="center">
+  <a href="https://crates.io/crates/jany"><img src="https://img.shields.io/crates/v/jany.svg" alt="crates.io"></a>
+  <a href="https://crates.io/crates/jany"><img src="https://img.shields.io/crates/d/jany.svg" alt="downloads"></a>
   <a href="LICENSE"><img src="https://img.shields.io/badge/license-MIT-blue.svg" alt="MIT"></a>
+  <a href="https://github.com/yukihirop/jany/actions/workflows/ci.yml"><img src="https://github.com/yukihirop/jany/actions/workflows/ci.yml/badge.svg" alt="CI"></a>
   <img src="https://img.shields.io/badge/commands-find%20%C2%B7%20curl%20%C2%B7%20docker%20run%20%C2%B7%20yours-3b6fd1.svg" alt="find · curl · docker run · yours">
 </p>
 
@@ -96,15 +99,15 @@ jany's own actions are flags, so `<command>` is always the tool's name:
 |---|---|
 | `jany --list` | the definitions found, with an example each |
 | `jany --test find` | run a definition's `cases.toml` (jev answers are mocked) |
-| `jany --register tar` | scaffold `~/.config/jany/cmd/tar/` |
+| `/jany-register tar` | create and fill `~/.config/jany/cmd/tar/` with the agent skill |
 | `jany --init zsh\|bash\|fish` | the wrapper, plus built-ins and the skill |
 | `jany --setup` | save the API key |
 
 ## Adding a command
 
 ```sh
-jany --register tar           # three template files
-/jany-register tar            # in Claude Code or Codex: fill them in, run the cases
+jany --register tar           # optional: scaffold only, without the skill
+/jany-register tar            # in Claude Code or Codex: create, fill, and test the definition
 jany --test tar
 ```
 
