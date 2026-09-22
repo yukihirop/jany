@@ -15,7 +15,14 @@ pub fn script(shell: &str) -> Result<&'static str, JxError> {
 /// `print -z` は次のプロンプトの入力行にテキストを積む。
 const ZSH: &str = r#"# jx: put the assembled command on the next prompt instead of running it
 jx() {
-  local __jx_cmd
+  local __jx_a __jx_cmd
+  # jx's own actions (--list, --init, --test, ...) print for reading, not for the prompt
+  for __jx_a in "$@"; do
+    case "$__jx_a" in
+      --) break ;;
+      --init|--list|--test|--register|--setup|-h|--help|-V|--version) command jx "$@"; return $? ;;
+    esac
+  done
   __jx_cmd="$(command jx "$@")" || return $?
   [ -n "$__jx_cmd" ] && print -z -- "$__jx_cmd"
 }
@@ -25,7 +32,13 @@ jx() {
 /// `\e[5n`(端末状態要求)で端末に `\e[0n` を返させる。手元で未確認。
 const BASH: &str = r#"# jx: put the assembled command on the next prompt instead of running it
 jx() {
-  local __jx_cmd
+  local __jx_a __jx_cmd
+  for __jx_a in "$@"; do
+    case "$__jx_a" in
+      --) break ;;
+      --init|--list|--test|--register|--setup|-h|--help|-V|--version) command jx "$@"; return $? ;;
+    esac
+  done
   __jx_cmd="$(command jx "$@")" || return $?
   [ -n "$__jx_cmd" ] || return 0
   if [[ -n "$BASH_VERSION" && $- == *i* ]]; then
@@ -39,6 +52,15 @@ jx() {
 
 const FISH: &str = r#"# jx: put the assembled command on the next prompt instead of running it
 function jx
+    for a in $argv
+        switch $a
+            case --
+                break
+            case --init --list --test --register --setup -h --help -V --version
+                command jx $argv
+                return $status
+        end
+    end
     set -l __jx_cmd (command jx $argv)
     or return $status
     test -n "$__jx_cmd"; and commandline -r -- "$__jx_cmd"
