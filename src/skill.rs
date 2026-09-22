@@ -20,6 +20,46 @@ const FILES: &[(&str, &str)] = &[
     ("examples/curl/cases.toml", include_str!("../design/curl/cases.toml")),
 ];
 
+/// 組み込みのコマンド定義。`jx init` が `~/.config/jx/cmd/<name>/` にまだ無いものだけ置く。
+/// 中身は design/ の原本そのもの(examples と同じ)。
+const COMMANDS: &[(&str, &[(&str, &str)])] = &[
+    ("find", &[
+        ("schema.toml", include_str!("../design/find/schema.toml")),
+        ("assemble.sh", include_str!("../design/find/assemble.sh")),
+        ("cases.toml", include_str!("../design/find/cases.toml")),
+    ]),
+    ("curl", &[
+        ("schema.toml", include_str!("../design/curl/schema.toml")),
+        ("assemble.sh", include_str!("../design/curl/assemble.sh")),
+        ("cases.toml", include_str!("../design/curl/cases.toml")),
+    ]),
+    ("docker/run", &[
+        ("schema.toml", include_str!("../design/docker/run/schema.toml")),
+        ("assemble.sh", include_str!("../design/docker/run/assemble.sh")),
+        ("cases.toml", include_str!("../design/docker/run/cases.toml")),
+    ]),
+];
+
+/// まだ無い定義だけ置く。既に schema.toml があるディレクトリは(古くても)触らない。
+/// 戻り値は置いたディレクトリ。
+pub fn install_commands(cmd_dir: &Path) -> Result<Vec<String>, JxError> {
+    let mut placed = Vec::new();
+    for (name, files) in COMMANDS {
+        let dir = cmd_dir.join(name);
+        if dir.join("schema.toml").exists() {
+            continue;
+        }
+        std::fs::create_dir_all(&dir)?;
+        for (rel, body) in *files {
+            let p = dir.join(rel);
+            std::fs::write(&p, body)?;
+            set_executable(&p, rel.ends_with(".sh"))?;
+        }
+        placed.push(dir.display().to_string());
+    }
+    Ok(placed)
+}
+
 /// `JX_SKILL_DIR`、無ければ `~/.agents/skills/jx-register`。
 pub fn skill_dir() -> Option<PathBuf> {
     if let Some(d) = std::env::var_os("JX_SKILL_DIR") {

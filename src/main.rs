@@ -25,6 +25,7 @@ jx — jev x any command. Turn loosely ordered words into a command line.
 usage: jx <command> [words ...] [flags] [-- passthrough args]
        jx init <zsh|bash|fish>     print the shell wrapper (eval \"$(jx init zsh)\");
                                    also installs the /jx-register skill to ~/.agents/skills
+                                   and the built-in commands (find, curl, docker run) to ~/.config/jx/cmd
        jx register <name> [sub]    scaffold ~/.config/jx/cmd/<name>/ (then: /jx-register <name>)
        jx test <command>           run cases.toml of a command definition
        jx setup                    save your OpenRouter API key
@@ -112,6 +113,15 @@ fn run(args: Vec<String>) -> Result<i32, JxError> {
                     }
                 }
                 Err(e) => eprintln!("jx: could not install the jx-register skill: {e}"),
+            }
+            // 組み込みの定義(find / curl / docker run)。無いものだけ置く。
+            match skill::install_commands(&cmd_dir) {
+                Ok(placed) => {
+                    for d in placed {
+                        eprintln!("jx: installed {d}");
+                    }
+                }
+                Err(e) => eprintln!("jx: could not install the built-in commands: {e}"),
             }
             return Ok(0);
         }
