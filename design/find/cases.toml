@@ -13,6 +13,8 @@ risk = "dangerous"
 [[case]]
 words = ["log", "files", "older", "than", "7", "days", "in", "/var/log", "delete"]
 argv  = ["find", "/var/log", "-type", "f", "-iname", "*.log", "-mtime", "+7", "-delete"]
+preview = ["find", "/var/log", "-type", "f", "-iname", "*.log", "-mtime", "+7"]
+risk = "dangerous"
 [case.jev]
 "role.0"    = { choice = "extension", confidence = 0.88 }
 "role.4"    = { choice = "time_amount", confidence = 0.95 }
@@ -57,8 +59,7 @@ words = ["big", "mp4", "over", "1.5GB", "ls"]
 argv  = ["find", ".", "-iname", "*.mp4", "-size", "+1536M", "-ls"]
 [case.jev]
 "role.1"        = { choice = "extension", confidence = 0.9 }
-"type_typo.1"   = { choice = "none" }
-"action_typo.1" = { choice = "none" }
+# type_typo/action_typo は英字だけの語にしか聞かない (jind prompt.rs:93 と同じ)。"mp4" には聞かれない
 "role.3"        = { choice = "size_amount", confidence = 0.95 }
 "atleast.3"     = { noul = 0.9 }
 

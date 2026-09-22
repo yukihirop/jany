@@ -241,7 +241,7 @@ choices = "amount_units"               # 全単位キー + none
 none = "A plain count (a depth), no unit"
 
 [[questions]]
-key  = "at_least"
+key  = "atleast"
 kind = "noul"
 when = { has_amount = true, direction_missing = true }   # resolved でも聞く (`a week`)
 ask  = """Does `tokens[{i}]` (\"{w}\") mean AT LEAST this much (older than / more than / larger than / over), \
@@ -256,6 +256,7 @@ choices = "table:types"                # 表の語 (1 文字のものは除く) 
 min_choice_len = 2
 none = "Not an entry type"
 applies_to = "type"                    # jev が role=type と言ったとき、表に無ければこの答えを fixed にする
+none_conf = 0.3                        # none なら組み立てられないので confidence を落とす
 
 [[questions]]
 key  = "action_typo"
@@ -265,6 +266,7 @@ ask  = "If `tokens[{i}]` (\"{w}\") is a misspelled action word, which one was in
 choices = "table:actions"
 none = "Not an action"
 applies_to = "action"
+none_conf = 0.3
 
 # ---------------------------------------------------------------------------
 # repair。jev の答えは語ごとに独立なので、隣接関係をここで直す。上から順に適用。

@@ -1,0 +1,17 @@
+[package]
+name = "jx"
+version = "0.1.0"
+edition = "2024"
+description = "jev x any command: turn loosely ordered words into a command line, defined per command by a schema"
+license = "MIT"
+
+[dependencies]
+serde = { version = "1", features = ["derive"] }
+serde_json = { version = "1", features = ["preserve_order"] }
+ureq = { version = "3", features = ["json"] }
+toml = { version = "1", features = ["preserve_order"] }
+thiserror = "2"
+rpassword = "7"
+shell-words = "1"
+regex = "1"
+tempfile = "3"

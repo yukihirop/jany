@@ -4,7 +4,10 @@ jind(jev × find、`../jind`)と jurl(jev × curl、`../jurl`)を汎化した 1 
 
 ## いまの状態
 
-- コードはまだ無い。`PLAN.md`(最初のメモ)と `design/`(設計草案)だけ。コミット 1 件(`91bf0a7`)、リモート無し。`CLAUDE.md` と `design/curl/` は未コミット
+- **Rust ホストが動く**(2026-09-22)。`src/` 16 ファイル。`JX_CMD_DIR=design cargo run -- test find` 8/8、`test curl` 30/30。実機で jev を呼んで `find empty folders depth 2 count` → `find . -maxdepth 2 -type d -empty | wc -l` が stdout に出ることを確認。リモート無し
+- `src/` の由来: `jev/{mod,client}.rs` `color.rs` `setup.rs` `config.rs` は jind からほぼコピー。`rules.rs` `questions.rs` `repair.rs` `amount.rs` `schema.rs` `assemble.rs` `interpret.rs` `testrun.rs` `init.rs` は schema 駆動で書き直したもの。jind/jurl は参考であって依存ではない
+- `jx init zsh` はゼロ引数の zsh で eval して関数が定義されるところまで確認。**対話シェルで `print -z` が入力行に載るところは未確認**。bash の `\e[5n` トリックは `bash -n` で構文だけ確認、fish は手元に無く未確認
+- 未実装: `jx register`、`/jx-register` スキル、`jx test` の `--explain` 以外の詳細表示。clippy の style 警告 2 件(needless_range_loop / contains_key+insert)は放置
 - 2026-09-22 に `~/JavaScriptProjects/jx` から `~/RustProjects/jx` へ移動した(ホストを Rust にすると決めたため)
 - `design/find/` は jind 0.1.0 を定義ファイル 3 つに書き直したもの。`assemble.sh` は実際に動かして jind の README の例 6 本 + 衝突 1 本で同じ argv が出ることを確認済み
 - `design/curl/` は jurl 0.1.2 を同じ 3 つに書き直したもの(2026-09-22)。`assemble.sh` は jurl の `-n --no-jev` 実出力 16 本 + interpret.rs / EXAMPLES の jev 例 7 本で同じ argv。規則は Python で最小エンジンを書いて `jurl --explain` の role 列と 18 本一致(scratch、リポジトリには入れていない)。DSL に足したものは `design/HOST.md`「curl を書いて分かったこと」
@@ -24,7 +27,7 @@ jind(jev × find、`../jind`)と jurl(jev × curl、`../jurl`)を汎化した 1 
 ```
 ~/.config/jx/cmd/<name>[/<sub>]/
   schema.toml    roles(jev に見せる説明文)、amount の単位表、語テーブル、rules、questions、repair、confirm
-  assemble.sh    役割付きトークン JSON → {argv, preview, dangerous, postprocess, error}
+  assemble.sh    役割付きトークン JSON → {argv, preview, risk, pipe, error}。実行権限が要る(jx は直接 exec する)
   cases.toml     words → argv のテスト。jev の答えは Mock で書く。`jx test <name>` が回す
 ```
 
@@ -39,11 +42,13 @@ jind(jev × find、`../jind`)と jurl(jev × curl、`../jurl`)を汎化した 1 
 
 1. ~~jurl を `design/curl/` に書き直す~~ 済(2026-09-22)。予想どおり `pair` / `join` の 2 プリミティブ、2 語規則は `next`、have_method/have_url は `once`、Header は role の `mask` で表した
 2. ~~jurl の出力側を jx に持ち込むか~~ 決定(2026-09-22、ユーザー): **持ち込まない**。jx curl は curl の argv を作って実行し stdout をそのまま出す。整形は `| jq`。jurl 本体は残るので機能が消えるわけではない
-3. DSL が固まったら Rust ホストを書く。`cargo init`、jind/jurl から共通ファイルをコピー(`main.rs` の `execute` と `output.rs` の確認 UI は持ち越さない)、`design/find` と `design/curl` の cases が通るまで。regex は regex crate、TOML は toml crate、クォートは shell_words。`jx init zsh|bash|fish` も書く(bash のトリックは実機で確かめる)
-4. `/jx-register` スキルを書き、docker run で LLM 生成を試す
+3. ~~Rust ホストを書く~~ 済(2026-09-22)。find 8 + curl 30 の cases が通る。直したこと: cases が chdir するので `Schema.dir` は canonicalize、サブコマンド解決は `/` や `.` を含む語で止める(`jx find /var/log …` が `design/find//var/log` を探しに行った)、find の cases 2 本を直した(delete に `risk`/`preview` が無かった、"mp4" は英字だけでないので typo 質問は聞かれない = jind `prompt.rs:93` と同じ)
+4. `jx init zsh` を対話シェルで試す(`eval "$(jx init zsh)"` を .zshrc に入れて `jx find …` → 入力行に載るか)
+5. `/jx-register` スキルを書き、docker run で LLM 生成を試す。`jx register <name>` は雛形(schema.toml / assemble.sh / cases.toml)を置くだけの薄いコマンドにする想定(未着手)
 
 ## 分かっていること・注意
 
+- `jx test` の Mock は「cases に書いた答えのうち jx が聞かなかったキーがあれば失敗」にしてある。質問の when とフィクスチャのずれに気づくため。逆に聞かれたのに答えが無いキーは未回答のまま(未解決になれば error で落ちる)
 - jq の `//` は `false` を「無い」扱いにする。`assemble.sh` の初版で `within an hour` が `-mmin +60` になった(正しくは `-60`)。**LLM が書く assemble.sh は cases.toml 無しで信用しない**
 - assemble の契約は curl で変えた: `dangerous: bool` → `risk: "none"|"unsafe"|"dangerous"`、`defaults: [...]` → `defaults: {args, ...}`、stdin に `answers`(command scope の質問の答え)を追加。find の 3 ファイルも合わせて直してある
 - jurl 0.1.2 のバグを 1 つ見つけた: `http://example.com/x?a=1` が規則で未解決になる(`=` 分岐が URL より先)。jx の schema では直っている。jurl 側は直していない
