@@ -1,4 +1,4 @@
-//! `jx test <command>`: cases.toml を Mock Oracle で回す。
+//! `jx --test <command>`: cases.toml を Mock Oracle で回す。
 //! jev の答えは cases に書いたもの。聞かれていないキーに答えたら失敗(質問設計とフィクスチャのずれに気づくため)。
 
 use crate::color::{self, C, paint};

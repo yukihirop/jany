@@ -5,7 +5,7 @@
 ```
 schema.toml    語 → 役割 の決め方(規則、jev への質問、repair)
 assemble.sh    役割付きトークン JSON → argv JSON。実行権限が要る
-cases.toml     words → argv のテスト。`jx test <name>` が回す
+cases.toml     words → argv のテスト。`jx --test <name>` が回す
 ```
 
 ホストの流れ: **規則(schema.rules)→ 決まらない語があれば jev に質問 → 答えを書き戻す → repair → assemble.sh → shell-quote した 1 行を stdout**。全部規則で決まれば jev は呼ばれない(速い・無料)。
@@ -24,7 +24,7 @@ cases.toml     words → argv のテスト。`jx test <name>` が回す
 [command]
 name = "find"                 # 表示名。バイナリ名でなくてよい(argv の先頭は assemble.sh が決める)
 description = """..."""       # jev に state.tool として渡す。何のコマンドか・語がどう崩れるかを英語で
-example = "log files older than 7 days in /var/log delete"   # `jx list` に出る
+example = "log files older than 7 days in /var/log delete"   # `jx --list` に出る
 ```
 
 ### [[roles]]

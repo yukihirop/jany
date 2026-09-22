@@ -1,4 +1,4 @@
-//! 規則 → (jev) → repair → assemble の流れ。main と `jx test` の両方から使う。
+//! 規則 → (jev) → repair → assemble の流れ。main と `jx --test` の両方から使う。
 
 use crate::assemble::{self, Assembled};
 use crate::config::Config;

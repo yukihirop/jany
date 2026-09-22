@@ -18,9 +18,9 @@ jind 0.1.0 を `design/find/`、jurl 0.1.2 を `design/curl/` の 3 ファイル
 | 答えの書き戻し | `role.i` → role/confidence/probs。`applies_to` のある typo 質問は表に無い語の fixed に (`none_conf` で none のとき confidence を落とす)。`sets = { tag }` は noul > 0.5 でタグ。amount 役割には unit/at_least を書く。command scope の答えは `answers` に残して repair / assemble へ | jind `prompt::apply`、jurl `prompt::apply` |
 | repair プリミティブ | `attach_unit`、`claim {marker, role, side, many, from, skip, require, clear}`、`join {answer, sep, into}` (noul 答えで前の語に結合、後ろから、連鎖あり)、`pair {members, key_probs, value_probs, key_role, value_role, key_role_if}` (交互配置を尤度で選ぶ) | jind `repair.rs`、jurl `repair::merge_joined` / `pair_key_values` |
 | assemble 呼び出し | stdin に `{tokens, passthrough, answers, defaults}` (`defaults` は schema `[defaults]` を user config で上書きした object)、stdout の `{argv, preview, risk, pipe, error}` を読む。confidence の min はホストが取る | jind `assemble.rs` + `find.rs` の外側、jurl `assemble.rs` + `curl::argv` |
-| 出力 | **jx はコマンドを実行しない** (決定 2026-09-22)。`argv` (+ `pipe` があれば `\| wc -l`) を shell-quote した 1 行を stdout に出す。`eval "$(jx init zsh)"` が定義する関数がそれをシェルの入力行に置く (zsh `print -z`、fish `commandline -r`、bash は `bind '"\e[0n": …'; printf '\e[5n'` のトリック: 手元で未確認)。説明表・jev の行・エラーは stderr。`reject_below` 未満は stdout に出さず exit 非 0。`risk = "dangerous"` かつ schema `preview_readonly = true` なら preview argv を jx が回して `preview_lines` 件を stderr に見せる (read-only の実行だけ例外)。`risk = "unsafe"` は `unsafe_note` を stderr に一言。`-y` / `confirm_below` / `[Y/n/e]` / `$EDITOR` は無い (入力行そのものが確認) | 新規。jind/jurl の `execute` は持ち越さない |
-| `jx init <shell>` | ラッパー関数を出す | zoxide / fzf と同じ |
-| テストランナー | `jx test <name>`: cases.toml を Mock Oracle で回す。`setup.dirs` は一時ディレクトリに作って chdir | jind `interpret.rs` の Mock |
+| 出力 | **jx はコマンドを実行しない** (決定 2026-09-22)。`argv` (+ `pipe` があれば `\| wc -l`) を shell-quote した 1 行を stdout に出す。`eval "$(jx --init zsh)"` が定義する関数がそれをシェルの入力行に置く (zsh `print -z`、fish `commandline -r`、bash は `bind '"\e[0n": …'; printf '\e[5n'` のトリック: 手元で未確認)。説明表・jev の行・エラーは stderr。`reject_below` 未満は stdout に出さず exit 非 0。`risk = "dangerous"` かつ schema `preview_readonly = true` なら preview argv を jx が回して `preview_lines` 件を stderr に見せる (read-only の実行だけ例外)。`risk = "unsafe"` は `unsafe_note` を stderr に一言。`-y` / `confirm_below` / `[Y/n/e]` / `$EDITOR` は無い (入力行そのものが確認) | 新規。jind/jurl の `execute` は持ち越さない |
+| `jx --init <shell>` | ラッパー関数を出す | zoxide / fzf と同じ |
+| テストランナー | `jx --test <name>`: cases.toml を Mock Oracle で回す。`setup.dirs` は一時ディレクトリに作って chdir | jind `interpret.rs` の Mock |
 
 ## schema (コマンドごと、`/jx-register` で LLM が書く)
 

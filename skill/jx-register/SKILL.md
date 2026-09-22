@@ -1,16 +1,16 @@
 ---
 name: jx-register
-description: jx にコマンド定義(schema.toml / assemble.sh / cases.toml)を追加する。`/jx-register <name> [sub]` で、そのコマンドの「よく使う 8 割」の語を役割に落とし、cases が `jx test` で全部通るまで直す。
+description: jx にコマンド定義(schema.toml / assemble.sh / cases.toml)を追加する。`/jx-register <name> [sub]` で、そのコマンドの「よく使う 8 割」の語を役割に落とし、cases が `jx --test` で全部通るまで直す。
 ---
 
 # jx-register — jx にコマンドを 1 つ追加する
 
 jx は「崩れた語の並び → 1 本のコマンド行」を、コマンドごとの定義ファイル 3 つで動かす。
-このスキルはその 3 つを書いて、`jx test <name>` が通るところまで持っていく。
+このスキルはその 3 つを書いて、`jx --test <name>` が通るところまで持っていく。
 
 - DSL の全キーと assemble の契約: [reference.md](reference.md)(**必ず先に読む**。schema は未知のキーをエラーにする)
 - 実例: `examples/find/`(jind 相当。amount・claim・dangerous/preview・pipe)、`examples/curl/`(jurl 相当。next・once・regex・join・pair・mask・scope=command)
-- 置き場所: `~/.config/jx/cmd/<name>[/<sub>]/`(`JX_CMD_DIR` があればそこ)。`jx register <name> [sub]` が雛形を置く
+- 置き場所: `~/.config/jx/cmd/<name>[/<sub>]/`(`JX_CMD_DIR` があればそこ)。`jx --register <name> [sub]` が雛形を置く
 
 ## 手順
 
@@ -19,12 +19,12 @@ jx は「崩れた語の並び → 1 本のコマンド行」を、コマンド�
 - `<name>` のバイナリの `--help` / man を読み、**よく使うオプション 8 割**を選ぶ。全部は載せない(jind が `-mtime` だけに割り切ったのと同じ)。載せないものは `--` の後ろに素通しする
 - 役割集合が閉じないもの(任意の SQL 文、jq の式、ffmpeg のフィルタ)は対象外。無理に役割にしない
 - 実際に打ちそうな語の並びを **10 本以上**書き出す。崩れ方(語順違い、typo、単位の分離、`8080:80` のような結合語)も入れる。これが cases になる
-- サブコマンドがあるなら階層にする: `jx register docker run` → `cmd/docker/run/`
+- サブコマンドがあるなら階層にする: `jx --register docker run` → `cmd/docker/run/`
 
 ### 2. 雛形を置く
 
 ```
-jx register <name> [sub]
+jx --register <name> [sub]
 ```
 
 3 ファイルの雛形が置かれる。既にあれば上書きしない。
@@ -52,8 +52,8 @@ jx register <name> [sub]
 ### 5. cases.toml を書いて回す
 
 ```
-jx test <name> [sub]
-jx test <name> [sub] --explain      # 語ごとの役割表を見る
+jx --test <name> [sub]
+jx --test <name> [sub] --explain      # 語ごとの役割表を見る
 ```
 
 - 1 で書き出した語の並びを全部 cases にする。規則だけで決まるものは `no_jev = true`
@@ -71,4 +71,4 @@ jx test <name> [sub] --explain      # 語ごとの役割表を見る
 
 - 事実と推測を分ける。バイナリのオプション名は `--help` に当てる。確かめていないことは「確かめていない」と書く
 - 頼まれていないコマンドまで登録しない
-- `~/.config/jx/cmd/` の既存定義を上書きしない(`jx register` は既存があれば止まる)
+- `~/.config/jx/cmd/` の既存定義を上書きしない(`jx --register` は既存があれば止まる)

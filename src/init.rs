@@ -1,5 +1,5 @@
-//! `jx init <shell>`: jx の stdout(コマンド 1 行)をシェルの入力行に置くラッパー関数を出す。
-//! zoxide / fzf と同じ方式。`eval "$(jx init zsh)"` を rc に書く。
+//! `jx --init <shell>`: jx の stdout(コマンド 1 行)をシェルの入力行に置くラッパー関数を出す。
+//! zoxide / fzf と同じ方式。`eval "$(jx --init zsh)"` を rc に書く。
 
 use crate::error::JxError;
 

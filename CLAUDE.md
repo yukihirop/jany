@@ -1,13 +1,13 @@
 # jx — 引き継ぎ(2026-09-22)
 
-jind(jev × find、`../jind`)と jurl(jev × curl、`../jurl`)を汎化した 1 本の CLI。`jx find …` `jx curl …` `jx docker run …` `jx sql …` のように、コマンドごとの定義を `~/.config/jx/cmd/<name>/` から読み込んで、同じ流れ(規則 → jev → repair → 組み立て → 確認 → 実行)で動かす。動機は「jind, jurl, jocker, jql … とコマンドが増えるたびにバイナリを書くのが面倒」。コマンドの追加は `jx register <name>` + Claude Code / Codex のスキル(`/jx-register <name>`)で定義ファイルを生成させる想定。
+jind(jev × find、`../jind`)と jurl(jev × curl、`../jurl`)を汎化した 1 本の CLI。`jx find …` `jx curl …` `jx docker run …` `jx sql …` のように、コマンドごとの定義を `~/.config/jx/cmd/<name>/` から読み込んで、同じ流れ(規則 → jev → repair → 組み立て → 確認 → 実行)で動かす。動機は「jind, jurl, jocker, jql … とコマンドが増えるたびにバイナリを書くのが面倒」。コマンドの追加は `jx --register <name>` + Claude Code / Codex のスキル(`/jx-register <name>`)で定義ファイルを生成させる想定。
 
 ## いまの状態
 
 - **Rust ホストが動く**(2026-09-22)。`src/` 16 ファイル。`JX_CMD_DIR=design cargo run -- test find` 8/8、`test curl` 30/30。実機で jev を呼んで `find empty folders depth 2 count` → `find . -maxdepth 2 -type d -empty | wc -l` が stdout に出ることを確認。リモート無し
 - `src/` の由来: `jev/{mod,client}.rs` `color.rs` `setup.rs` `config.rs` は jind からほぼコピー。`rules.rs` `questions.rs` `repair.rs` `amount.rs` `schema.rs` `assemble.rs` `interpret.rs` `testrun.rs` `init.rs` は schema 駆動で書き直したもの。jind/jurl は参考であって依存ではない
-- `jx init zsh` はゼロ引数の zsh で eval して関数が定義されるところまで確認。**対話シェルで `print -z` が入力行に載るところは未確認**。bash の `\e[5n` トリックは `bash -n` で構文だけ確認、fish は手元に無く未確認
-- **`/jx-register` スキルと `jx register`**(2026-09-22): スキル本体は `skill/jx-register/{SKILL.md, reference.md, template/}` にあり、`include_str!` でバイナリに埋め込む(examples は `design/find` `design/curl` そのもの)。`jx init <shell>` がラッパーを stdout に出すついでに `~/.agents/skills/jx-register/` に書き(`JX_SKILL_DIR` で変更可、中身が同じなら何もしない)、`~/.claude/skills/` `~/.codex/skills/` が既にあってその名前が無ければ symlink を置く。**Codex が `~/.agents/skills` を読むかは確かめていない**(symlink はそのための保険)。`jx register <name> [sub]` は雛形 3 ファイルを置くだけ(既存があれば止まる)。**組み込みの 3 定義(find / curl / docker run)も `jx init` が `~/.config/jx/cmd/` に置く**(`design/` を `include_str!` で埋め込み。`schema.toml` が既にあるディレクトリは触らないので、design/ を直したら `jx init` では更新されない。手で消すかコピーする)。`design/` はリポジトリ内の原本で、実行時に読むのは `~/.config/jx/cmd/`
+- `jx --init zsh` はゼロ引数の zsh で eval して関数が定義されるところまで確認。**対話シェルで `print -z` が入力行に載るところは未確認**。bash の `\e[5n` トリックは `bash -n` で構文だけ確認、fish は手元に無く未確認
+- **`/jx-register` スキルと `jx --register`**(2026-09-22): スキル本体は `skill/jx-register/{SKILL.md, reference.md, template/}` にあり、`include_str!` でバイナリに埋め込む(examples は `design/find` `design/curl` そのもの)。`jx --init <shell>` がラッパーを stdout に出すついでに `~/.agents/skills/jx-register/` に書き(`JX_SKILL_DIR` で変更可、中身が同じなら何もしない)、`~/.claude/skills/` `~/.codex/skills/` が既にあってその名前が無ければ symlink を置く。**Codex が `~/.agents/skills` を読むかは確かめていない**(symlink はそのための保険)。`jx --register <name> [sub]` は雛形 3 ファイルを置くだけ(既存があれば止まる)。**組み込みの 3 定義(find / curl / docker run)も `jx --init` が `~/.config/jx/cmd/` に置く**(`design/` を `include_str!` で埋め込み。`schema.toml` が既にあるディレクトリは触らないので、design/ を直したら `jx --init` では更新されない。手で消すかコピーする)。`design/` はリポジトリ内の原本で、実行時に読むのは `~/.config/jx/cmd/`
 - **`design/docker/run/`**(2026-09-22): スキルの手順で書いた 3 つ目の定義。cases 16/16。書いて分かったことは `design/HOST.md`「docker run を書いて分かったこと」(ホストに足したのは `next` の table 補正 1 つ)
 - clippy の style 警告 2 件(needless_range_loop / contains_key+insert)は放置。`src/` は 18 ファイル
 - 2026-09-22 に `~/JavaScriptProjects/jx` から `~/RustProjects/jx` へ移動した(ホストを Rust にすると決めたため)
@@ -30,7 +30,7 @@ jind(jev × find、`../jind`)と jurl(jev × curl、`../jurl`)を汎化した 1 
 ~/.config/jx/cmd/<name>[/<sub>]/
   schema.toml    roles(jev に見せる説明文)、amount の単位表、語テーブル、rules、questions、repair、confirm
   assemble.sh    役割付きトークン JSON → {argv, preview, risk, pipe, error}。実行権限が要る(jx は直接 exec する)
-  cases.toml     words → argv のテスト。jev の答えは Mock で書く。`jx test <name>` が回す
+  cases.toml     words → argv のテスト。jev の答えは Mock で書く。`jx --test <name>` が回す
 ```
 
 ホストが持つ部品と schema が持つものの境界は `design/HOST.md` に表でまとめてある。要点:
@@ -38,21 +38,21 @@ jind(jev × find、`../jind`)と jurl(jev × curl、`../jurl`)を汎化した 1 
 - ホスト組み込みの match: `prefix / word / table / builtin(path_like, glob, existing_dir, amount, unit_word)`、when: `prev_role / prev_is_number / not_amount / has_unit / has_direction`
 - repair プリミティブ: `attach_unit`、`claim {marker, role, side, many, from, skip, require, clear}`。jind の 3 本はこれで書けた
 - `risk = "dangerous"` を assemble が返したら `-y` でも必ず確認・既定 No・`preview` argv を先に回して `preview_lines` 件見せる(jind の delete の安全弁を一般化したもの)。`risk = "unsafe"`(jurl の PUT/PATCH/DELETE)は閾値を `confirm_below_unsafe` に上げるだけで `-y` は効く
-- **jx はコマンドを実行しない**(決定 2026-09-22、ユーザー): 未知のコマンドを扱うので、Y の後に spawn せず、shell-quote した 1 行を stdout に出し、`eval "$(jx init zsh)"` のラッパー(`print -z`)がシェルの入力行に置く。Enter は人が押す。`-y` / `confirm_below` / `[Y/n/e]` / `$EDITOR` は無し、`reject_below` だけ残す。`postprocess = "count_lines"` は `pipe = ["wc", "-l"]` に(`find … | wc -l` を入力行に載せる)。`risk = "dangerous"` の preview だけ read-only の実行として残す(schema に `preview_readonly = true` を書かせる)。詳細は `design/HOST.md`「出力」行
+- **jx はコマンドを実行しない**(決定 2026-09-22、ユーザー): 未知のコマンドを扱うので、Y の後に spawn せず、shell-quote した 1 行を stdout に出し、`eval "$(jx --init zsh)"` のラッパー(`print -z`)がシェルの入力行に置く。Enter は人が押す。`-y` / `confirm_below` / `[Y/n/e]` / `$EDITOR` は無し、`reject_below` だけ残す。`postprocess = "count_lines"` は `pipe = ["wc", "-l"]` に(`find … | wc -l` を入力行に載せる)。`risk = "dangerous"` の preview だけ read-only の実行として残す(schema に `preview_readonly = true` を書かせる)。詳細は `design/HOST.md`「出力」行
 
 ## 次にやること
 
 1. ~~jurl を `design/curl/` に書き直す~~ 済(2026-09-22)。予想どおり `pair` / `join` の 2 プリミティブ、2 語規則は `next`、have_method/have_url は `once`、Header は role の `mask` で表した
 2. ~~jurl の出力側を jx に持ち込むか~~ 決定(2026-09-22、ユーザー): **持ち込まない**。jx curl は curl の argv を作って実行し stdout をそのまま出す。整形は `| jq`。jurl 本体は残るので機能が消えるわけではない
 3. ~~Rust ホストを書く~~ 済(2026-09-22)。find 8 + curl 30 の cases が通る。直したこと: cases が chdir するので `Schema.dir` は canonicalize、サブコマンド解決は `/` や `.` を含む語で止める(`jx find /var/log …` が `design/find//var/log` を探しに行った)、find の cases 2 本を直した(delete に `risk`/`preview` が無かった、"mp4" は英字だけでないので typo 質問は聞かれない = jind `prompt.rs:93` と同じ)
-4. `jx init zsh` を対話シェルで試す(`eval "$(jx init zsh)"` を .zshrc に入れて `jx find …` → 入力行に載るか)
-5. ~~`/jx-register` スキルを書き、docker run で試す~~ 済(2026-09-22)。ただし試したのは「Claude Code がスキルの手順に沿って自分で書く」であって、`/jx-register docker run` をスキルとして呼んだわけではない。**未検証: 実際に `jx init zsh` を本物の HOME で実行してスキルが Claude Code / Codex に見えるか、`/jx-register <name>` で一発で通る定義が出るか**
-6. `cargo install --path .` 済(2026-09-22、`~/.cargo/bin/jx`)。`jx init zsh` を本物の HOME で実行(`~/.agents/skills/jx-register`、`~/.claude/skills` `~/.codex/skills` への symlink、`~/.config/jx/cmd/{find,curl,docker/run}` ができる)→ 新しい Claude Code セッションで `/jx-register` が一覧に出るか → 4 つ目のコマンド(ユーザーがよく打つもの)で `/jx-register` を本当に呼んで試す
+4. `jx --init zsh` を対話シェルで試す(`eval "$(jx --init zsh)"` を .zshrc に入れて `jx find …` → 入力行に載るか)
+5. ~~`/jx-register` スキルを書き、docker run で試す~~ 済(2026-09-22)。ただし試したのは「Claude Code がスキルの手順に沿って自分で書く」であって、`/jx-register docker run` をスキルとして呼んだわけではない。**未検証: 実際に `jx --init zsh` を本物の HOME で実行してスキルが Claude Code / Codex に見えるか、`/jx-register <name>` で一発で通る定義が出るか**
+6. `cargo install --path .` 済(2026-09-22、`~/.cargo/bin/jx`)。`jx --init zsh` を本物の HOME で実行(`~/.agents/skills/jx-register`、`~/.claude/skills` `~/.codex/skills` への symlink、`~/.config/jx/cmd/{find,curl,docker/run}` ができる)→ 新しい Claude Code セッションで `/jx-register` が一覧に出るか → 4 つ目のコマンド(ユーザーがよく打つもの)で `/jx-register` を本当に呼んで試す
 
 ## 分かっていること・注意
 
 - 規則で決まった語も jev の state.tokens に入る。秘密を含みうる役割(curl の header、docker の env)には `mask` を付ける
-- `jx test` の Mock は「cases に書いた答えのうち jx が聞かなかったキーがあれば失敗」にしてある。質問の when とフィクスチャのずれに気づくため。逆に聞かれたのに答えが無いキーは未回答のまま(未解決になれば error で落ちる)
+- `jx --test` の Mock は「cases に書いた答えのうち jx が聞かなかったキーがあれば失敗」にしてある。質問の when とフィクスチャのずれに気づくため。逆に聞かれたのに答えが無いキーは未回答のまま(未解決になれば error で落ちる)
 - jq の `//` は `false` を「無い」扱いにする。`assemble.sh` の初版で `within an hour` が `-mmin +60` になった(正しくは `-60`)。**LLM が書く assemble.sh は cases.toml 無しで信用しない**
 - assemble の契約は curl で変えた: `dangerous: bool` → `risk: "none"|"unsafe"|"dangerous"`、`defaults: [...]` → `defaults: {args, ...}`、stdin に `answers`(command scope の質問の答え)を追加。find の 3 ファイルも合わせて直してある
 - jurl 0.1.2 のバグを 1 つ見つけた: `http://example.com/x?a=1` が規則で未解決になる(`=` 分岐が URL より先)。jx の schema では直っている。jurl 側は直していない

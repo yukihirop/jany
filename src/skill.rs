@@ -1,5 +1,5 @@
-//! `/jx-register` スキルの配布と `jx register <name>` の雛形。
-//! スキル本体は `skill/jx-register/` をバイナリに埋め込み、`jx init` のたびに
+//! `/jx-register` スキルの配布と `jx --register <name>` の雛形。
+//! スキル本体は `skill/jx-register/` をバイナリに埋め込み、`jx --init` のたびに
 //! `~/.agents/skills/jx-register/` へ書く(Claude Code / Codex のどちらからも読める場所)。
 
 use crate::error::JxError;
@@ -20,7 +20,7 @@ const FILES: &[(&str, &str)] = &[
     ("examples/curl/cases.toml", include_str!("../design/curl/cases.toml")),
 ];
 
-/// 組み込みのコマンド定義。`jx init` が `~/.config/jx/cmd/<name>/` にまだ無いものだけ置く。
+/// 組み込みのコマンド定義。`jx --init` が `~/.config/jx/cmd/<name>/` にまだ無いものだけ置く。
 /// 中身は design/ の原本そのもの(examples と同じ)。
 const COMMANDS: &[(&str, &[(&str, &str)])] = &[
     ("find", &[
@@ -113,10 +113,10 @@ fn set_executable(p: &Path, on: bool) -> std::io::Result<()> {
     Ok(())
 }
 
-/// `jx register <name> [sub…]`: 雛形 3 ファイルを置く。既にあれば触らない。
+/// `jx --register <name> [sub…]`: 雛形 3 ファイルを置く。既にあれば触らない。
 pub fn register(cmd_dir: &Path, names: &[String]) -> Result<i32, JxError> {
     if names.is_empty() {
-        return Err(JxError::Usage("jx register <name> [sub …]  e.g. jx register docker run".into()));
+        return Err(JxError::Usage("jx --register <name> [sub …]  e.g. jx --register docker run".into()));
     }
     for n in names {
         if n.is_empty() || n.contains('/') || n.starts_with('.') || n.starts_with('-') {
@@ -140,7 +140,7 @@ pub fn register(cmd_dir: &Path, names: &[String]) -> Result<i32, JxError> {
     }
     let skill = skill_dir().map(|d| d.display().to_string()).unwrap_or_else(|| "~/.agents/skills/jx-register".into());
     eprintln!(
-        "\nnext: fill them in with the skill (Claude Code / Codex): /jx-register {name}\n      reference: {skill}/reference.md\n      then run:  jx test {name}"
+        "\nnext: fill them in with the skill (Claude Code / Codex): /jx-register {name}\n      reference: {skill}/reference.md\n      then run:  jx --test {name}"
     );
     Ok(0)
 }

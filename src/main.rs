@@ -23,16 +23,18 @@ const HELP: &str = "\
 jx — jev x any command. Turn loosely ordered words into a command line.
 
 usage: jx <command> [words ...] [flags] [-- passthrough args]
-       jx init <zsh|bash|fish>     print the shell wrapper (eval \"$(jx init zsh)\");
+       jx --init <zsh|bash|fish>   print the shell wrapper (eval \"$(jx --init zsh)\");
                                    also installs the /jx-register skill to ~/.agents/skills
                                    and the built-in commands (find, curl, docker run) to ~/.config/jx/cmd
-       jx register <name> [sub]    scaffold ~/.config/jx/cmd/<name>/ (then: /jx-register <name>)
-       jx test <command>           run cases.toml of a command definition
-       jx setup                    save your OpenRouter API key
-       jx list                     show the command definitions found
+       jx --register <name> [sub]  scaffold ~/.config/jx/cmd/<name>/ (then: /jx-register <name>)
+       jx --test <command> [sub]   run cases.toml of a command definition
+       jx --setup                  save your OpenRouter API key
+       jx --list                   show the command definitions found
+
+jx's own actions are flags so that <command> is always the tool's name.
 
 jx never runs the command: it prints one shell-quoted line on stdout, and the
-wrapper from `jx init` puts it on your prompt. Everything else goes to stderr.
+wrapper from `jx --init` puts it on your prompt. Everything else goes to stderr.
 
 flags:
       --explain   show how each word was classified (stderr)
@@ -45,7 +47,7 @@ env:
   JEV_MODEL            default typesafe/jev-1.13
   JX_CMD_DIR           where command definitions live (default ~/.config/jx/cmd)
   JX_CONFIG_DIR        default ~/.config/jx
-  JX_SKILL_DIR         where `jx init` puts the skill (default ~/.agents/skills/jx-register)
+  JX_SKILL_DIR         where `jx --init` puts the skill (default ~/.agents/skills/jx-register)
   JX_NO_JEV=1          same as --no-jev
 ";
 
@@ -53,6 +55,8 @@ env:
 struct Opts {
     explain: bool,
     no_jev: bool,
+    /// jx 自身の操作(--init / --register / --test / --setup / --list)。<command> は常にツール名なのでフラグにしてある。
+    action: Option<String>,
 }
 
 fn main() {
@@ -80,6 +84,12 @@ fn run(args: Vec<String>) -> Result<i32, JxError> {
             "--" => after = true,
             "--explain" => opts.explain = true,
             "--no-jev" => opts.no_jev = true,
+            "--init" | "--register" | "--test" | "--setup" | "--list" => {
+                if let Some(prev) = &opts.action {
+                    return Err(JxError::Usage(format!("{prev} and {a} together")));
+                }
+                opts.action = Some(a.clone());
+            }
             "-h" | "--help" => {
                 print!("{HELP}");
                 return Ok(0);
@@ -94,16 +104,16 @@ fn run(args: Vec<String>) -> Result<i32, JxError> {
     if std::env::var("JX_NO_JEV").map(|v| v == "1").unwrap_or(false) {
         opts.no_jev = true;
     }
-    if words.is_empty() {
+    if words.is_empty() && opts.action.is_none() {
         print!("{HELP}");
         return Ok(0);
     }
     let cmd_dir = config::cmd_dir().ok_or_else(|| JxError::Config("cannot determine command dir (HOME unset)".into()))?;
 
-    match words[0].as_str() {
-        "setup" if words.len() == 1 => return setup::run(),
-        "init" => {
-            let shell = words.get(1).map(String::as_str).unwrap_or("");
+    match opts.action.as_deref().unwrap_or("") {
+        "--setup" => return setup::run(),
+        "--init" => {
+            let shell = words.first().map(String::as_str).unwrap_or("");
             print!("{}", init::script(shell)?);
             // スキルも一緒に置く。失敗してもラッパーは出ているので警告だけ。
             match skill::install() {
@@ -125,15 +135,15 @@ fn run(args: Vec<String>) -> Result<i32, JxError> {
             }
             return Ok(0);
         }
-        "register" => return skill::register(&cmd_dir, &words[1..]),
-        "test" => {
-            let (schema, used) = schema::resolve(&cmd_dir, &words[1..])?;
-            if used != words.len() - 1 {
-                return Err(JxError::Usage(format!("jx test takes a command name, got extra: {}", words[1 + used..].join(" "))));
+        "--register" => return skill::register(&cmd_dir, &words),
+        "--test" => {
+            let (schema, used) = schema::resolve(&cmd_dir, &words)?;
+            if used != words.len() {
+                return Err(JxError::Usage(format!("jx --test takes a command name, got extra: {}", words[used..].join(" "))));
             }
             return testrun::run(&schema, opts.explain);
         }
-        "list" => {
+        "--list" => {
             let on = color::stdout_enabled();
             for name in list(&cmd_dir) {
                 let ex = schema::Schema::load(&cmd_dir.join(name.replace(' ', "/"))).ok().and_then(|s| s.command.example);

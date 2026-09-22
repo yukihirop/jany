@@ -1,4 +1,4 @@
-# jx cases: __NAME__。`jx test __NAME__` が回す。
+# jx cases: __NAME__。`jx --test __NAME__` が回す。
 # 期待値: argv / preview / risk / pipe / error / confidence / tokens / state / not_asked / setup.dirs / no_jev
 # [case.jev] は jev の答えの Mock。聞かれないキーに答えると失敗する(--explain で何が聞かれるか見る)。
 
