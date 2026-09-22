@@ -1,5 +1,5 @@
 [package]
-name = "jx"
+name = "jany"
 version = "0.1.0"
 edition = "2024"
 description = "jev x any command: turn loosely ordered words into a command line, defined per command by a schema"

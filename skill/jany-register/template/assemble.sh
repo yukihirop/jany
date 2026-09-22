@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# jx assemble: __NAME__
+# jany assemble: __NAME__
 # stdin:  {tokens:[{text,role,value,tags,amount,confidence,source,note}], passthrough:[...], answers:{...}, defaults:{args:[...]}}
 # stdout: {argv:[...], preview:null|[...], risk:"none"|"unsafe"|"dangerous", pipe:null|[...], error:null|"..."}
 # 注意: jq の `//` は false も落とす。真偽値は `== true` で見る。

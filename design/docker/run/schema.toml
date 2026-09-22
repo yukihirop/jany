@@ -1,4 +1,4 @@
-# jx schema: docker run (3 つ目のコマンド。/jx-register の手順で書いた最初の定義。2026-09-22)
+# jany schema: docker run (3 つ目のコマンド。/jany-register の手順で書いた最初の定義。2026-09-22)
 #
 # 載せたもの: image / command、-d --rm -it --privileged --read-only、--name、-p、-v、-e、--env-file、
 #   --network、-w、-u、-m、--cpus、--restart、--platform。`--` の後ろはコンテナ内コマンド。

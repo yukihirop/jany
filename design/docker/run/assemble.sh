@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# jx assemble for docker run。
+# jany assemble for docker run。
 #
 # stdin : {"tokens":[{"text","role","value","amount":{"n","unit","at_least"}|null,...}], "passthrough":[...], "answers":{}, "defaults":{"args":[...]}}
 # stdout: {"argv":[...], "preview":null, "risk":"none"|"unsafe", "pipe":null, "error":"..."|null}

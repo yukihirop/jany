@@ -1,16 +1,16 @@
-# jx コマンド定義リファレンス
+# jany コマンド定義リファレンス
 
-1 つのコマンド定義は 3 ファイル。置き場所は `~/.config/jx/cmd/<name>[/<sub>]/`(`JX_CMD_DIR` で変更可)。
+1 つのコマンド定義は 3 ファイル。置き場所は `~/.config/jany/cmd/<name>[/<sub>]/`(`JANY_CMD_DIR` で変更可)。
 
 ```
 schema.toml    語 → 役割 の決め方(規則、jev への質問、repair)
 assemble.sh    役割付きトークン JSON → argv JSON。実行権限が要る
-cases.toml     words → argv のテスト。`jx --test <name>` が回す
+cases.toml     words → argv のテスト。`jany --test <name>` が回す
 ```
 
 ホストの流れ: **規則(schema.rules)→ 決まらない語があれば jev に質問 → 答えを書き戻す → repair → assemble.sh → shell-quote した 1 行を stdout**。全部規則で決まれば jev は呼ばれない(速い・無料)。
 
-サブコマンドはディレクトリ階層: `cmd/docker/run/schema.toml` は `jx docker run …`。
+サブコマンドはディレクトリ階層: `cmd/docker/run/schema.toml` は `jany docker run …`。
 
 ---
 
@@ -24,7 +24,7 @@ cases.toml     words → argv のテスト。`jx --test <name>` が回す
 [command]
 name = "find"                 # 表示名。バイナリ名でなくてよい(argv の先頭は assemble.sh が決める)
 description = """..."""       # jev に state.tool として渡す。何のコマンドか・語がどう崩れるかを英語で
-example = "log files older than 7 days in /var/log delete"   # `jx --list` に出る
+example = "log files older than 7 days in /var/log delete"   # `jany --list` に出る
 ```
 
 ### [[roles]]
@@ -239,12 +239,12 @@ key_role_if = { role = "query", any = [{ member_role = "query" }, { value_of = "
 [assemble]
 script = "assemble.sh"               # schema と同じディレクトリからの相対。実行権限が要る
 
-[defaults]                           # assemble.sh の stdin `defaults` に入る。~/.config/jx/config.toml の [cmd.<name>.defaults] で上書きされる
+[defaults]                           # assemble.sh の stdin `defaults` に入る。~/.config/jany/config.toml の [cmd.<name>.defaults] で上書きされる
 args = []
 content_type = "application/json"
 
 [confirm]
-preview_readonly = true              # risk="dangerous" のとき preview argv を jx が実行して見せてよい(read-only のときだけ true)
+preview_readonly = true              # risk="dangerous" のとき preview argv を jany が実行して見せてよい(read-only のときだけ true)
 preview_lines = 10
 unsafe_note = "this method cannot be undone"   # risk="unsafe" のとき stderr に出す一言
 ```
@@ -281,7 +281,7 @@ stdin に JSON、stdout に JSON。言語は問わない(find/curl は bash + jq
 { "argv": ["find", "/var/log", "-type", "f"], "preview": null, "risk": "none", "pipe": null, "error": null }
 ```
 
-- `argv`: 実行される argv。jx はこれを shell-quote して 1 行にする(実行はしない)
+- `argv`: 実行される argv。jany はこれを shell-quote して 1 行にする(実行はしない)
 - `preview`: `risk = "dangerous"` のとき、破壊せずに対象だけ見せる argv(find なら `-delete` を外したもの)
 - `risk`: `"none"` | `"unsafe"`(取り消しにくい: PUT/DELETE)| `"dangerous"`(破壊的: rm、find -delete)
 - `pipe`: 後ろに `|` で繋ぐ argv(`["wc", "-l"]`)。無ければ null
@@ -323,7 +323,7 @@ error = "unresolved: nothing"                    # エラーを期待する
 期待値のキー: `argv` `preview` `risk`(既定 "none")`pipe` `error` `confidence`(±0.01)`tokens`(結合後の語の並び)`state`(jev に渡す state の一部、`"hints.0" = "path"` のようにドット区切り)`not_asked = ["unit.2"]`(聞かれてはいけないキー)`defaults`(上書き)`passthrough`。
 
 Mock の掟:
-- `[case.jev]` に書いたキーを jx が聞かなかったら **失敗**(質問の `when` とフィクスチャのずれに気づくため)
+- `[case.jev]` に書いたキーを jany が聞かなかったら **失敗**(質問の `when` とフィクスチャのずれに気づくため)
 - 聞かれたのに答えが無いキーは未回答のまま。役割が決まらなければ `unresolved` エラー
 - `[case.jev]` が無いのに jev が必要になったら失敗(規則だけで決まると宣言したことになる)
 - `{ choice = "x", confidence = 0.9 }` / `{ choice = "x", probs = { x = 0.6, y = 0.4 } }` / `{ noul = 0.97 }`
@@ -333,10 +333,10 @@ Mock の掟:
 ## エラーの読み方
 
 ```
-jx: schema.toml: unknown field `foo`         schema に無いキー。上の一覧にあるものだけ
-jx: rule role `x` is not in [[roles]]        rules の role は roles に宣言する
-jx: unknown builtin `x`                      path_like / glob / existing_dir / amount / unit_word
-jx: could not interpret: foo                 未解決語。規則か jev の役割説明を足す
-jx: assemble.sh: No such file or directory   chmod +x を忘れている
-error: jev: case answers `unit.2` but jx did not ask it   質問の when が当たっていない
+jany: schema.toml: unknown field `foo`         schema に無いキー。上の一覧にあるものだけ
+jany: rule role `x` is not in [[roles]]        rules の role は roles に宣言する
+jany: unknown builtin `x`                      path_like / glob / existing_dir / amount / unit_word
+jany: could not interpret: foo                 未解決語。規則か jev の役割説明を足す
+jany: assemble.sh: No such file or directory   chmod +x を忘れている
+error: jev: case answers `unit.2` but jany did not ask it   質問の when が当たっていない
 ```

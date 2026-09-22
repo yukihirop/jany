@@ -1,8 +1,8 @@
-//! env + ~/.config/jx/config.toml。全部省略可。API キーは jind / jurl の設定からも借りる。
+//! env + ~/.config/jany/config.toml。全部省略可。API キーは jind / jurl の設定からも借りる。
 //!
 //! ```toml
 //! [jev]
-//! api_key = "..."          # `jx setup` が書く
+//! api_key = "..."          # `jany setup` が書く
 //! model = "typesafe/jev-1.13"
 //! reject_below = 0.5       # これ未満の解釈は stdout に出さない
 //!
@@ -10,7 +10,7 @@
 //! content_type = "text/plain"
 //! ```
 
-use crate::error::JxError;
+use crate::error::JanyError;
 use serde::Deserialize;
 use std::collections::BTreeMap;
 use std::path::PathBuf;
@@ -47,30 +47,30 @@ impl Default for Jev {
 }
 
 pub fn config_dir() -> Option<PathBuf> {
-    if let Ok(p) = std::env::var("JX_CONFIG_DIR") {
+    if let Ok(p) = std::env::var("JANY_CONFIG_DIR") {
         return Some(PathBuf::from(p));
     }
     let home = std::env::var_os("HOME")?;
-    Some(PathBuf::from(home).join(".config").join("jx"))
+    Some(PathBuf::from(home).join(".config").join("jany"))
 }
 
 pub fn path() -> Option<PathBuf> {
     config_dir().map(|d| d.join("config.toml"))
 }
 
-/// コマンド定義の置き場。`JX_CMD_DIR` があればそこ(開発中は `design/` を指す)。
+/// コマンド定義の置き場。`JANY_CMD_DIR` があればそこ(開発中は `design/` を指す)。
 pub fn cmd_dir() -> Option<PathBuf> {
-    if let Ok(p) = std::env::var("JX_CMD_DIR") {
+    if let Ok(p) = std::env::var("JANY_CMD_DIR") {
         return Some(PathBuf::from(p));
     }
     config_dir().map(|d| d.join("cmd"))
 }
 
-pub fn load() -> Result<Config, JxError> {
+pub fn load() -> Result<Config, JanyError> {
     let mut cfg = match path() {
         Some(p) if p.exists() => {
             let text = std::fs::read_to_string(&p)?;
-            toml::from_str::<Config>(&text).map_err(|e| JxError::Config(format!("{}: {e}", p.display())))?
+            toml::from_str::<Config>(&text).map_err(|e| JanyError::Config(format!("{}: {e}", p.display())))?
         }
         _ => Config::default(),
     };

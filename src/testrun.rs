@@ -1,9 +1,9 @@
-//! `jx --test <command>`: cases.toml を Mock Oracle で回す。
+//! `jany --test <command>`: cases.toml を Mock Oracle で回す。
 //! jev の答えは cases に書いたもの。聞かれていないキーに答えたら失敗(質問設計とフィクスチャのずれに気づくため)。
 
 use crate::color::{self, C, paint};
 use crate::config::Config;
-use crate::error::JxError;
+use crate::error::JanyError;
 use crate::interpret;
 use crate::jev::{Answers, DecisionsResponse, Oracle, Questions};
 use crate::questions::answer_from_toml;
@@ -64,18 +64,18 @@ struct Mock {
 }
 
 impl Oracle for Mock {
-    fn decide(&self, state: Value, questions: Questions) -> Result<DecisionsResponse, JxError> {
+    fn decide(&self, state: Value, questions: Questions) -> Result<DecisionsResponse, JanyError> {
         let Some(table) = &self.answers else {
-            return Err(JxError::Jev("jev was called but the case has no [case.jev] (expected rules only)".into()));
+            return Err(JanyError::Jev("jev was called but the case has no [case.jev] (expected rules only)".into()));
         };
         for k in table.keys() {
             if !questions.contains_key(k) {
-                return Err(JxError::Jev(format!("case answers `{k}` but jx did not ask it; asked: {:?}", questions.keys().collect::<Vec<_>>())));
+                return Err(JanyError::Jev(format!("case answers `{k}` but jany did not ask it; asked: {:?}", questions.keys().collect::<Vec<_>>())));
             }
         }
         let mut answers = Answers::new();
         for (k, v) in table {
-            let a = answer_from_toml(v).ok_or_else(|| JxError::Jev(format!("bad answer for `{k}`: {v}")))?;
+            let a = answer_from_toml(v).ok_or_else(|| JanyError::Jev(format!("bad answer for `{k}`: {v}")))?;
             answers.insert(k.clone(), a);
         }
         *self.seen.borrow_mut() = Some((state, questions));
@@ -83,10 +83,10 @@ impl Oracle for Mock {
     }
 }
 
-pub fn run(schema: &Schema, explain: bool) -> Result<i32, JxError> {
+pub fn run(schema: &Schema, explain: bool) -> Result<i32, JanyError> {
     let p = schema.dir.join("cases.toml");
-    let text = std::fs::read_to_string(&p).map_err(|e| JxError::Usage(format!("{}: {e}", p.display())))?;
-    let cases: Cases = toml::from_str(&text).map_err(|e| JxError::Usage(format!("{}: {e}", p.display())))?;
+    let text = std::fs::read_to_string(&p).map_err(|e| JanyError::Usage(format!("{}: {e}", p.display())))?;
+    let cases: Cases = toml::from_str(&text).map_err(|e| JanyError::Usage(format!("{}: {e}", p.display())))?;
     let on = color::stderr_enabled();
     let cfg = Config::default();
     let cwd = std::env::current_dir()?;
@@ -184,8 +184,8 @@ fn run_case(schema: &Schema, cfg: &Config, c: &Case, explain: bool) -> Vec<Strin
         }
         Err(e) => {
             let got = match &e {
-                JxError::Unresolved(s) => format!("unresolved: {}", s.trim_end_matches(" (jev disabled)")),
-                JxError::Assemble(s) => s.clone(),
+                JanyError::Unresolved(s) => format!("unresolved: {}", s.trim_end_matches(" (jev disabled)")),
+                JanyError::Assemble(s) => s.clone(),
                 other => other.to_string(),
             };
             match &c.error {

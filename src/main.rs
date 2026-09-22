@@ -17,24 +17,24 @@ mod testrun;
 mod token;
 
 use color::{C, paint};
-use error::JxError;
+use error::JanyError;
 
 const HELP: &str = "\
-jx — jev x any command. Turn loosely ordered words into a command line.
+jany — jev x any command. Turn loosely ordered words into a command line.
 
-usage: jx <command> [words ...] [flags] [-- passthrough args]
-       jx --init <zsh|bash|fish>   print the shell wrapper (eval \"$(jx --init zsh)\");
-                                   also installs the /jx-register skill to ~/.agents/skills
-                                   and the built-in commands (find, curl, docker run) to ~/.config/jx/cmd
-       jx --register <name> [sub]  scaffold ~/.config/jx/cmd/<name>/ (then: /jx-register <name>)
-       jx --test <command> [sub]   run cases.toml of a command definition
-       jx --setup                  save your OpenRouter API key
-       jx --list                   show the command definitions found
+usage: jany <command> [words ...] [flags] [-- passthrough args]
+       jany --init <zsh|bash|fish>   print the shell wrapper (eval \"$(jany --init zsh)\");
+                                   also installs the /jany-register skill to ~/.agents/skills
+                                   and the built-in commands (find, curl, docker run) to ~/.config/jany/cmd
+       jany --register <name> [sub]  scaffold ~/.config/jany/cmd/<name>/ (then: /jany-register <name>)
+       jany --test <command> [sub]   run cases.toml of a command definition
+       jany --setup                  save your OpenRouter API key
+       jany --list                   show the command definitions found
 
-jx's own actions are flags so that <command> is always the tool's name.
+jany's own actions are flags so that <command> is always the tool's name.
 
-jx never runs the command: it prints one shell-quoted line on stdout, and the
-wrapper from `jx --init` puts it on your prompt. Everything else goes to stderr.
+jany never runs the command: it prints one shell-quoted line on stdout, and the
+wrapper from `jany --init` puts it on your prompt. Everything else goes to stderr.
 
 flags:
       --explain   show how each word was classified (stderr)
@@ -43,19 +43,19 @@ flags:
   -V, --version
 
 env:
-  OPENROUTER_API_KEY   required for jev (also read from ~/.config/{jx,jurl,jind}/config.toml)
+  OPENROUTER_API_KEY   required for jev (also read from ~/.config/{jany,jurl,jind}/config.toml)
   JEV_MODEL            default typesafe/jev-1.13
-  JX_CMD_DIR           where command definitions live (default ~/.config/jx/cmd)
-  JX_CONFIG_DIR        default ~/.config/jx
-  JX_SKILL_DIR         where `jx --init` puts the skill (default ~/.agents/skills/jx-register)
-  JX_NO_JEV=1          same as --no-jev
+  JANY_CMD_DIR           where command definitions live (default ~/.config/jany/cmd)
+  JANY_CONFIG_DIR        default ~/.config/jany
+  JANY_SKILL_DIR         where `jany --init` puts the skill (default ~/.agents/skills/jany-register)
+  JANY_NO_JEV=1          same as --no-jev
 ";
 
 #[derive(Default)]
 struct Opts {
     explain: bool,
     no_jev: bool,
-    /// jx 自身の操作(--init / --register / --test / --setup / --list)。<command> は常にツール名なのでフラグにしてある。
+    /// jany 自身の操作(--init / --register / --test / --setup / --list)。<command> は常にツール名なのでフラグにしてある。
     action: Option<String>,
 }
 
@@ -64,13 +64,13 @@ fn main() {
     match run(args) {
         Ok(code) => std::process::exit(code),
         Err(e) => {
-            eprintln!("jx: {e}");
+            eprintln!("jany: {e}");
             std::process::exit(e.exit_code());
         }
     }
 }
 
-fn run(args: Vec<String>) -> Result<i32, JxError> {
+fn run(args: Vec<String>) -> Result<i32, JanyError> {
     let mut opts = Opts::default();
     let mut words = Vec::new();
     let mut passthrough = Vec::new();
@@ -86,7 +86,7 @@ fn run(args: Vec<String>) -> Result<i32, JxError> {
             "--no-jev" => opts.no_jev = true,
             "--init" | "--register" | "--test" | "--setup" | "--list" => {
                 if let Some(prev) = &opts.action {
-                    return Err(JxError::Usage(format!("{prev} and {a} together")));
+                    return Err(JanyError::Usage(format!("{prev} and {a} together")));
                 }
                 opts.action = Some(a.clone());
             }
@@ -95,20 +95,20 @@ fn run(args: Vec<String>) -> Result<i32, JxError> {
                 return Ok(0);
             }
             "-V" | "--version" => {
-                println!("jx {}", env!("CARGO_PKG_VERSION"));
+                println!("jany {}", env!("CARGO_PKG_VERSION"));
                 return Ok(0);
             }
             _ => words.push(a),
         }
     }
-    if std::env::var("JX_NO_JEV").map(|v| v == "1").unwrap_or(false) {
+    if std::env::var("JANY_NO_JEV").map(|v| v == "1").unwrap_or(false) {
         opts.no_jev = true;
     }
     if words.is_empty() && opts.action.is_none() {
         print!("{HELP}");
         return Ok(0);
     }
-    let cmd_dir = config::cmd_dir().ok_or_else(|| JxError::Config("cannot determine command dir (HOME unset)".into()))?;
+    let cmd_dir = config::cmd_dir().ok_or_else(|| JanyError::Config("cannot determine command dir (HOME unset)".into()))?;
 
     match opts.action.as_deref().unwrap_or("") {
         "--setup" => return setup::run(),
@@ -119,19 +119,19 @@ fn run(args: Vec<String>) -> Result<i32, JxError> {
             match skill::install() {
                 Ok(changed) => {
                     for c in changed {
-                        eprintln!("jx: installed {c}");
+                        eprintln!("jany: installed {c}");
                     }
                 }
-                Err(e) => eprintln!("jx: could not install the jx-register skill: {e}"),
+                Err(e) => eprintln!("jany: could not install the jany-register skill: {e}"),
             }
             // 組み込みの定義(find / curl / docker run)。無いものだけ置く。
             match skill::install_commands(&cmd_dir) {
                 Ok(placed) => {
                     for d in placed {
-                        eprintln!("jx: installed {d}");
+                        eprintln!("jany: installed {d}");
                     }
                 }
-                Err(e) => eprintln!("jx: could not install the built-in commands: {e}"),
+                Err(e) => eprintln!("jany: could not install the built-in commands: {e}"),
             }
             return Ok(0);
         }
@@ -139,7 +139,7 @@ fn run(args: Vec<String>) -> Result<i32, JxError> {
         "--test" => {
             let (schema, used) = schema::resolve(&cmd_dir, &words)?;
             if used != words.len() {
-                return Err(JxError::Usage(format!("jx --test takes a command name, got extra: {}", words[used..].join(" "))));
+                return Err(JanyError::Usage(format!("jany --test takes a command name, got extra: {}", words[used..].join(" "))));
             }
             return testrun::run(&schema, opts.explain);
         }
@@ -148,7 +148,7 @@ fn run(args: Vec<String>) -> Result<i32, JxError> {
             for name in list(&cmd_dir) {
                 let ex = schema::Schema::load(&cmd_dir.join(name.replace(' ', "/"))).ok().and_then(|s| s.command.example);
                 match ex {
-                    Some(ex) => println!("{name}  {}", paint(on, C::Dim, &format!("e.g. jx {name} {ex}"))),
+                    Some(ex) => println!("{name}  {}", paint(on, C::Dim, &format!("e.g. jany {name} {ex}"))),
                     None => println!("{name}"),
                 }
             }
@@ -170,11 +170,11 @@ fn run(args: Vec<String>) -> Result<i32, JxError> {
     };
     let r = match interpret::run(&schema, &cfg, &words[used..], &passthrough, oracle_ref, None) {
         Ok(r) => r,
-        Err(JxError::Unresolved(s)) => {
+        Err(JanyError::Unresolved(s)) => {
             // どの語が決まらなかったかは表で見せる。
             let tokens = rules::classify(&schema, &words[used..]);
             output::explain(&tokens, None);
-            return Err(JxError::Unresolved(s));
+            return Err(JanyError::Unresolved(s));
         }
         Err(e) => return Err(e),
     };
@@ -190,7 +190,7 @@ fn run(args: Vec<String>) -> Result<i32, JxError> {
         if !opts.explain {
             output::explain(&r.tokens, r.jev.as_ref());
         }
-        return Err(JxError::LowConfidence(conf, cfg.jev.reject_below));
+        return Err(JanyError::LowConfidence(conf, cfg.jev.reject_below));
     }
     if r.jev.is_some() && conf < 0.8 {
         eprintln!("{}", paint(on, C::Yellow, &format!("confidence {conf:.2}: check the command before you run it")));
@@ -219,7 +219,7 @@ fn run(args: Vec<String>) -> Result<i32, JxError> {
 }
 
 /// preview argv(read-only と schema が言っているもの)を回して先頭 N 行を stderr に見せる。
-fn preview(argv: &[String], lines: usize, on: bool) -> Result<(), JxError> {
+fn preview(argv: &[String], lines: usize, on: bool) -> Result<(), JanyError> {
     if argv.is_empty() {
         return Ok(());
     }

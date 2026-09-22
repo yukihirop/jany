@@ -1,7 +1,7 @@
 use thiserror::Error;
 
 #[derive(Debug, Error)]
-pub enum JxError {
+pub enum JanyError {
     #[error("{0}")]
     Usage(String),
     #[error("no such command: {0} (looked in {1})")]
@@ -22,10 +22,10 @@ pub enum JxError {
     Config(String),
 }
 
-impl JxError {
+impl JanyError {
     pub fn exit_code(&self) -> i32 {
         match self {
-            JxError::Usage(_) | JxError::Config(_) | JxError::NoCommand(..) | JxError::Schema(_) => 64,
+            JanyError::Usage(_) | JanyError::Config(_) | JanyError::NoCommand(..) | JanyError::Schema(_) => 64,
             _ => 2,
         }
     }

@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# jx assemble for find (jind 0.1.0 の assemble.rs + find.rs 相当)。
+# jany assemble for find (jind 0.1.0 の assemble.rs + find.rs 相当)。
 #
 # stdin : {"tokens":[{"text","role","value","amount":{"n","unit","at_least"}|null}], "passthrough":[...], "answers":{}, "defaults":{"args":[...]}}
 #         tokens はすべて role が付いている (未解決はホストが弾く)。confidence はホストが min を取るのでここでは見ない。

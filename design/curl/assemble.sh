@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# jx assemble for curl (jurl 0.1.2 の assemble.rs + body.rs + url.rs + curl.rs::argv 相当)。
+# jany assemble for curl (jurl 0.1.2 の assemble.rs + body.rs + url.rs + curl.rs::argv 相当)。
 #
 # stdin : {"tokens":[{"text","role","value","tags":[...],"confidence",...}], "passthrough":[...], "answers":{...},
 #          "defaults":{"content_type":"application/json","args":[...]}}

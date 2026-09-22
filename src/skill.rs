@@ -1,17 +1,17 @@
-//! `/jx-register` スキルの配布と `jx --register <name>` の雛形。
-//! スキル本体は `skill/jx-register/` をバイナリに埋め込み、`jx --init` のたびに
-//! `~/.agents/skills/jx-register/` へ書く(Claude Code / Codex のどちらからも読める場所)。
+//! `/jany-register` スキルの配布と `jany --register <name>` の雛形。
+//! スキル本体は `skill/jany-register/` をバイナリに埋め込み、`jany --init` のたびに
+//! `~/.agents/skills/jany-register/` へ書く(Claude Code / Codex のどちらからも読める場所)。
 
-use crate::error::JxError;
+use crate::error::JanyError;
 use std::path::{Path, PathBuf};
 
 /// 配布するファイル。examples は design/ の find・curl そのもの。
 const FILES: &[(&str, &str)] = &[
-    ("SKILL.md", include_str!("../skill/jx-register/SKILL.md")),
-    ("reference.md", include_str!("../skill/jx-register/reference.md")),
-    ("template/schema.toml", include_str!("../skill/jx-register/template/schema.toml")),
-    ("template/assemble.sh", include_str!("../skill/jx-register/template/assemble.sh")),
-    ("template/cases.toml", include_str!("../skill/jx-register/template/cases.toml")),
+    ("SKILL.md", include_str!("../skill/jany-register/SKILL.md")),
+    ("reference.md", include_str!("../skill/jany-register/reference.md")),
+    ("template/schema.toml", include_str!("../skill/jany-register/template/schema.toml")),
+    ("template/assemble.sh", include_str!("../skill/jany-register/template/assemble.sh")),
+    ("template/cases.toml", include_str!("../skill/jany-register/template/cases.toml")),
     ("examples/find/schema.toml", include_str!("../design/find/schema.toml")),
     ("examples/find/assemble.sh", include_str!("../design/find/assemble.sh")),
     ("examples/find/cases.toml", include_str!("../design/find/cases.toml")),
@@ -20,7 +20,7 @@ const FILES: &[(&str, &str)] = &[
     ("examples/curl/cases.toml", include_str!("../design/curl/cases.toml")),
 ];
 
-/// 組み込みのコマンド定義。`jx --init` が `~/.config/jx/cmd/<name>/` にまだ無いものだけ置く。
+/// 組み込みのコマンド定義。`jany --init` が `~/.config/jany/cmd/<name>/` にまだ無いものだけ置く。
 /// 中身は design/ の原本そのもの(examples と同じ)。
 const COMMANDS: &[(&str, &[(&str, &str)])] = &[
     ("find", &[
@@ -42,7 +42,7 @@ const COMMANDS: &[(&str, &[(&str, &str)])] = &[
 
 /// まだ無い定義だけ置く。既に schema.toml があるディレクトリは(古くても)触らない。
 /// 戻り値は置いたディレクトリ。
-pub fn install_commands(cmd_dir: &Path) -> Result<Vec<String>, JxError> {
+pub fn install_commands(cmd_dir: &Path) -> Result<Vec<String>, JanyError> {
     let mut placed = Vec::new();
     for (name, files) in COMMANDS {
         let dir = cmd_dir.join(name);
@@ -60,18 +60,18 @@ pub fn install_commands(cmd_dir: &Path) -> Result<Vec<String>, JxError> {
     Ok(placed)
 }
 
-/// `JX_SKILL_DIR`、無ければ `~/.agents/skills/jx-register`。
+/// `JANY_SKILL_DIR`、無ければ `~/.agents/skills/jany-register`。
 pub fn skill_dir() -> Option<PathBuf> {
-    if let Some(d) = std::env::var_os("JX_SKILL_DIR") {
+    if let Some(d) = std::env::var_os("JANY_SKILL_DIR") {
         return Some(PathBuf::from(d));
     }
     let home = std::env::var_os("HOME")?;
-    Some(Path::new(&home).join(".agents").join("skills").join("jx-register"))
+    Some(Path::new(&home).join(".agents").join("skills").join("jany-register"))
 }
 
 /// 中身が違うファイルだけ書き直す。戻り値は書いたパスと作ったリンク。
-pub fn install() -> Result<Vec<String>, JxError> {
-    let dir = skill_dir().ok_or_else(|| JxError::Config("cannot determine skill dir (HOME unset)".into()))?;
+pub fn install() -> Result<Vec<String>, JanyError> {
+    let dir = skill_dir().ok_or_else(|| JanyError::Config("cannot determine skill dir (HOME unset)".into()))?;
     let mut changed = Vec::new();
     for (rel, body) in FILES {
         let p = dir.join(rel);
@@ -90,7 +90,7 @@ pub fn install() -> Result<Vec<String>, JxError> {
     if let Some(home) = std::env::var_os("HOME") {
         for tool in [".claude", ".codex"] {
             let skills = Path::new(&home).join(tool).join("skills");
-            let link = skills.join("jx-register");
+            let link = skills.join("jany-register");
             if skills.is_dir() && std::fs::symlink_metadata(&link).is_err() {
                 #[cfg(unix)]
                 if std::os::unix::fs::symlink(&dir, &link).is_ok() {
@@ -113,14 +113,14 @@ fn set_executable(p: &Path, on: bool) -> std::io::Result<()> {
     Ok(())
 }
 
-/// `jx --register <name> [sub…]`: 雛形 3 ファイルを置く。既にあれば触らない。
-pub fn register(cmd_dir: &Path, names: &[String]) -> Result<i32, JxError> {
+/// `jany --register <name> [sub…]`: 雛形 3 ファイルを置く。既にあれば触らない。
+pub fn register(cmd_dir: &Path, names: &[String]) -> Result<i32, JanyError> {
     if names.is_empty() {
-        return Err(JxError::Usage("jx --register <name> [sub …]  e.g. jx --register docker run".into()));
+        return Err(JanyError::Usage("jany --register <name> [sub …]  e.g. jany --register docker run".into()));
     }
     for n in names {
         if n.is_empty() || n.contains('/') || n.starts_with('.') || n.starts_with('-') {
-            return Err(JxError::Usage(format!("bad command name `{n}`: use plain words (docker run)")));
+            return Err(JanyError::Usage(format!("bad command name `{n}`: use plain words (docker run)")));
         }
     }
     let name = names.join(" ");
@@ -128,7 +128,7 @@ pub fn register(cmd_dir: &Path, names: &[String]) -> Result<i32, JxError> {
     let argv0 = names.iter().map(|n| format!("{n:?}")).collect::<Vec<_>>().join(", ");
     let dir = names.iter().fold(cmd_dir.to_path_buf(), |d, n| d.join(n));
     if dir.join("schema.toml").exists() {
-        return Err(JxError::Usage(format!("{} already exists; edit it or remove it first", dir.join("schema.toml").display())));
+        return Err(JanyError::Usage(format!("{} already exists; edit it or remove it first", dir.join("schema.toml").display())));
     }
     std::fs::create_dir_all(&dir)?;
     for rel in ["schema.toml", "assemble.sh", "cases.toml"] {
@@ -138,9 +138,9 @@ pub fn register(cmd_dir: &Path, names: &[String]) -> Result<i32, JxError> {
         set_executable(&p, rel.ends_with(".sh"))?;
         eprintln!("wrote {}", p.display());
     }
-    let skill = skill_dir().map(|d| d.display().to_string()).unwrap_or_else(|| "~/.agents/skills/jx-register".into());
+    let skill = skill_dir().map(|d| d.display().to_string()).unwrap_or_else(|| "~/.agents/skills/jany-register".into());
     eprintln!(
-        "\nnext: fill them in with the skill (Claude Code / Codex): /jx-register {name}\n      reference: {skill}/reference.md\n      then run:  jx --test {name}"
+        "\nnext: fill them in with the skill (Claude Code / Codex): /jany-register {name}\n      reference: {skill}/reference.md\n      then run:  jany --test {name}"
     );
     Ok(0)
 }

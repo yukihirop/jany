@@ -1,4 +1,4 @@
-# jx test cases for find。`jx test find` が回す。
+# jany test cases for find。`jany test find` が回す。
 # words → (規則 → jev モック → repair → assemble) → argv を比較する。
 # jev = 省略なら「規則だけで全部決まる」ことも検証する (jev を呼んだら失敗)。
 # jev = {...} は Mock Oracle の答え。聞かれていないキーに答えると失敗 (jind interpret.rs の Mock と同じ)。

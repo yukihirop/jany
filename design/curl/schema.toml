@@ -1,4 +1,4 @@
-# jx schema: curl (jurl 0.1.2 の rules.rs / token.rs / jev/prompt.rs / repair.rs をデータに落としたもの)
+# jany schema: curl (jurl 0.1.2 の rules.rs / token.rs / jev/prompt.rs / repair.rs をデータに落としたもの)
 #
 # find と同じ流れ: 規則 → jev → repair → assemble.sh。
 # find に無かった DSL の要素には `# NEW:` を付けた。HOST.md の表に足すべきもの。
@@ -337,7 +337,7 @@ content_type = "application/json"        # ボディがあって Content-Type �
 args = []                                # jurl の defaults.curl_args。`curl -sS` の直後に入る
 
 [confirm]
-# jx は実行せずシェルの入力行に置く (決定 2026-09-22)。curl に preview は無い。
+# jany は実行せずシェルの入力行に置く (決定 2026-09-22)。curl に preview は無い。
 # risk = "unsafe" (PUT/PATCH/DELETE) は入力行に置く前に stderr に「取り消せないメソッド」と一言出すだけ。
 # jurl の confirm_below / confirm_below_unsafe / -y / e は無くなった (入力行そのものが確認)。reject_below だけ残る。
 unsafe_note = "this method cannot be undone"

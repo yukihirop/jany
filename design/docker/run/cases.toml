@@ -1,4 +1,4 @@
-# jx cases: docker run。`JX_CMD_DIR=design jx test docker run`
+# jany cases: docker run。`JANY_CMD_DIR=design jany test docker run`
 # 規則だけで決まるもの (no_jev) と、jev の答えを Mock で書くもの。答えは実機の jev (typesafe/jev-1.13) で見た値を丸めたもの。
 
 # --- 規則だけ ---------------------------------------------------------------

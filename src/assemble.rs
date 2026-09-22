@@ -1,7 +1,7 @@
 //! assemble スクリプトの呼び出し。stdin に役割付きトークン、stdout から argv を受け取る。
 //! ホストはコマンドの意味を知らない。confidence の min だけここで取る。
 
-use crate::error::JxError;
+use crate::error::JanyError;
 use crate::jev::Answers;
 use crate::schema::Schema;
 use crate::token::Token;
@@ -32,10 +32,10 @@ fn default_risk() -> String {
 }
 
 /// 全語に役割が付いていることを確かめてからスクリプトを呼ぶ。
-pub fn assemble(schema: &Schema, tokens: &[Token], passthrough: &[String], answers: &Answers, defaults: &toml::Table) -> Result<Assembled, JxError> {
+pub fn assemble(schema: &Schema, tokens: &[Token], passthrough: &[String], answers: &Answers, defaults: &toml::Table) -> Result<Assembled, JanyError> {
     let unresolved: Vec<&str> = tokens.iter().filter(|t| !t.resolved()).map(|t| t.text.as_str()).collect();
     if !unresolved.is_empty() {
-        return Err(JxError::Unresolved(unresolved.join(", ")));
+        return Err(JanyError::Unresolved(unresolved.join(", ")));
     }
     let confidence = tokens.iter().map(|t| t.confidence).fold(1.0f32, f32::min);
 
@@ -66,18 +66,18 @@ pub fn assemble(schema: &Schema, tokens: &[Token], passthrough: &[String], answe
         .stdout(Stdio::piped())
         .stderr(Stdio::inherit())
         .spawn()
-        .map_err(|e| JxError::Assemble(format!("{}: {e}", script.display())))?;
+        .map_err(|e| JanyError::Assemble(format!("{}: {e}", script.display())))?;
     child.stdin.take().unwrap().write_all(input.to_string().as_bytes())?;
     let out = child.wait_with_output()?;
     if !out.status.success() {
-        return Err(JxError::Assemble(format!("{} exited with {}", script.display(), out.status)));
+        return Err(JanyError::Assemble(format!("{} exited with {}", script.display(), out.status)));
     }
-    let mut a: Assembled = serde_json::from_slice(&out.stdout).map_err(|e| JxError::Assemble(format!("{}: bad output: {e}", script.display())))?;
+    let mut a: Assembled = serde_json::from_slice(&out.stdout).map_err(|e| JanyError::Assemble(format!("{}: bad output: {e}", script.display())))?;
     if let Some(e) = a.error.take() {
-        return Err(JxError::Assemble(e));
+        return Err(JanyError::Assemble(e));
     }
     if a.argv.is_none() {
-        return Err(JxError::Assemble(format!("{}: neither argv nor error", script.display())));
+        return Err(JanyError::Assemble(format!("{}: neither argv nor error", script.display())));
     }
     a.confidence = confidence;
     Ok(a)

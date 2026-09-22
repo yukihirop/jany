@@ -122,5 +122,5 @@ pub struct Usage {
 
 /// 実機(client) とテストのモックを差し替えるための境界。
 pub trait Oracle {
-    fn decide(&self, state: Value, questions: Questions) -> Result<DecisionsResponse, crate::error::JxError>;
+    fn decide(&self, state: Value, questions: Questions) -> Result<DecisionsResponse, crate::error::JanyError>;
 }

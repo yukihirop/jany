@@ -1,4 +1,4 @@
-# jx test cases for curl。`jx test curl` が回す。
+# jany test cases for curl。`jany test curl` が回す。
 # words → (規則 → jev モック → repair → assemble) → argv を比較する。書き方は find/cases.toml と同じ。
 # 期待値は jurl 0.1.2 (`../jurl`、ローカルビルド) の `-n --no-jev` 実出力、または src/interpret.rs のテスト、EXAMPLES.md。
 # 「実機」= interpret.rs / docs/demo-capture.json に記録された jev の答え。「想定」= 答えは書いた人の見立て。
@@ -93,7 +93,7 @@ argv  = ["curl", "-sS", "--unknown-flag", "http://localhost/"]
 
 [[case]]
 # jurl 0.1.2 との差: jurl は `=` を含む語を先に見るので `http://example.com/x?a=1` が未解決になる (2026-09-22 実機で確認)。
-# jx の規則は `=` の左がボディのパス形のときだけ field にするので URL として通る。
+# jany の規則は `=` の左がボディのパス形のときだけ field にするので URL として通る。
 words = ["http://example.com/x?a=1", "b==2"]
 argv  = ["curl", "-sS", "http://example.com/x?a=1&b=2"]
 

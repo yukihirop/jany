@@ -1,7 +1,7 @@
-//! `~/.config/jx/cmd/<name>[/<sub>]/schema.toml` の形。意味は design/HOST.md。
+//! `~/.config/jany/cmd/<name>[/<sub>]/schema.toml` の形。意味は design/HOST.md。
 //! ここでは読むだけで解釈しない(解釈は rules / questions / repair)。
 
-use crate::error::JxError;
+use crate::error::JanyError;
 use regex::Regex;
 use serde::Deserialize;
 use std::collections::{BTreeMap, HashMap};
@@ -386,10 +386,10 @@ fn default_preview_lines() -> usize {
 }
 
 impl Schema {
-    pub fn load(dir: &Path) -> Result<Schema, JxError> {
+    pub fn load(dir: &Path) -> Result<Schema, JanyError> {
         let p = dir.join("schema.toml");
-        let text = std::fs::read_to_string(&p).map_err(|e| JxError::Schema(format!("{}: {e}", p.display())))?;
-        let mut s: Schema = toml::from_str(&text).map_err(|e| JxError::Schema(format!("{}: {e}", p.display())))?;
+        let text = std::fs::read_to_string(&p).map_err(|e| JanyError::Schema(format!("{}: {e}", p.display())))?;
+        let mut s: Schema = toml::from_str(&text).map_err(|e| JanyError::Schema(format!("{}: {e}", p.display())))?;
         // cases が chdir するので絶対パスに。
         s.dir = std::fs::canonicalize(dir).unwrap_or_else(|_| dir.to_path_buf());
         s.compile_regexes()?;
@@ -397,7 +397,7 @@ impl Schema {
         Ok(s)
     }
 
-    fn compile_regexes(&mut self) -> Result<(), JxError> {
+    fn compile_regexes(&mut self) -> Result<(), JanyError> {
         let mut pats: Vec<String> = Vec::new();
         for r in &self.rules {
             pats.extend(r.match_.regex.clone());
@@ -408,30 +408,30 @@ impl Schema {
         }
         for p in pats {
             if !self.regexes.contains_key(&p) {
-                let re = Regex::new(&p).map_err(|e| JxError::Schema(format!("regex `{p}`: {e}")))?;
+                let re = Regex::new(&p).map_err(|e| JanyError::Schema(format!("regex `{p}`: {e}")))?;
                 self.regexes.insert(p, re);
             }
         }
         Ok(())
     }
 
-    fn validate(&self) -> Result<(), JxError> {
+    fn validate(&self) -> Result<(), JanyError> {
         /// rules.rs の matches() が知っている builtin。
         const BUILTINS: &[&str] = &["path_like", "glob", "existing_dir", "amount", "unit_word"];
         let known: Vec<&str> = self.roles.iter().map(|r| r.key.as_str()).collect();
         for r in &self.rules {
             if r.role != "by_dimension" && r.role != "unresolved" && !known.contains(&r.role.as_str()) {
-                return Err(JxError::Schema(format!("rule role `{}` is not in [[roles]]", r.role)));
+                return Err(JanyError::Schema(format!("rule role `{}` is not in [[roles]]", r.role)));
             }
             if let Some(t) = &r.match_.table
                 && !self.tables.contains_key(t)
             {
-                return Err(JxError::Schema(format!("rule table `{t}` is not in [tables]")));
+                return Err(JanyError::Schema(format!("rule table `{t}` is not in [tables]")));
             }
             if let Some(b) = &r.match_.builtin
                 && !BUILTINS.contains(&b.as_str())
             {
-                return Err(JxError::Schema(format!("unknown builtin `{b}` (one of {})", BUILTINS.join(", "))));
+                return Err(JanyError::Schema(format!("unknown builtin `{b}` (one of {})", BUILTINS.join(", "))));
             }
         }
         Ok(())
@@ -489,18 +489,18 @@ impl Schema {
     }
 }
 
-/// `jx <name> [<sub> ...]`: cmd_dir 以下で最も深く一致するディレクトリを探す。
+/// `jany <name> [<sub> ...]`: cmd_dir 以下で最も深く一致するディレクトリを探す。
 /// 返り値: (schema, 消費した語数)。
-pub fn resolve(cmd_dir: &Path, words: &[String]) -> Result<(Schema, usize), JxError> {
+pub fn resolve(cmd_dir: &Path, words: &[String]) -> Result<(Schema, usize), JanyError> {
     let Some(first) = words.first() else {
-        return Err(JxError::Usage("nothing to do. try: jx find log files older than 7 days".into()));
+        return Err(JanyError::Usage("nothing to do. try: jany find log files older than 7 days".into()));
     };
     if first.is_empty() || first.contains('/') || first.starts_with('.') {
-        return Err(JxError::NoCommand(first.clone(), cmd_dir.display().to_string()));
+        return Err(JanyError::NoCommand(first.clone(), cmd_dir.display().to_string()));
     }
     let mut dir = cmd_dir.join(first);
     if !dir.is_dir() {
-        return Err(JxError::NoCommand(first.clone(), cmd_dir.display().to_string()));
+        return Err(JanyError::NoCommand(first.clone(), cmd_dir.display().to_string()));
     }
     let mut used = 1;
     for w in &words[1..] {
@@ -517,7 +517,7 @@ pub fn resolve(cmd_dir: &Path, words: &[String]) -> Result<(Schema, usize), JxEr
         }
     }
     if !dir.join("schema.toml").exists() {
-        return Err(JxError::NoCommand(words[..used].join(" "), cmd_dir.display().to_string()));
+        return Err(JanyError::NoCommand(words[..used].join(" "), cmd_dir.display().to_string()));
     }
     Ok((Schema::load(&dir)?, used))
 }

@@ -1,5 +1,5 @@
-# jx schema: __NAME__
-# キーの意味は ~/.agents/skills/jx-register/reference.md。実例は examples/find, examples/curl。
+# jany schema: __NAME__
+# キーの意味は ~/.agents/skills/jany-register/reference.md。実例は examples/find, examples/curl。
 # 未知のキーはエラーになる。
 
 [command]
