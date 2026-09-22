@@ -26,6 +26,14 @@ jany() {
   __jany_cmd="$(command jany "$@")" || return $?
   [ -n "$__jany_cmd" ] && print -z -- "$__jany_cmd"
 }
+
+_jany_complete() {
+  local -a __jany_words __jany_candidates
+  __jany_words=("${words[@]:1}")
+  __jany_candidates=("${(@f)$(command jany --complete -- "${__jany_words[@]}" | cut -f1)}")
+  _describe 'jany' __jany_candidates
+}
+compdef _jany_complete jany
 "#;
 
 /// bash は子プロセスから入力行を触れないので、キーシーケンス `\e[0n` にコマンドを束縛して
@@ -48,6 +56,16 @@ jany() {
     printf '%s\n' "$__jany_cmd"
   fi
 }
+
+_jany_complete() {
+  local __jany_out
+  __jany_out="$(command jany --complete -- "${COMP_WORDS[@]:1:$((COMP_CWORD-1))}" "${COMP_WORDS[COMP_CWORD]:-}")" || return 0
+  COMPREPLY=()
+  while IFS=$'\t' read -r __jany_candidate __jany_description; do
+    COMPREPLY+=("$__jany_candidate")
+  done <<< "$__jany_out"
+}
+complete -F _jany_complete jany
 "#;
 
 const FISH: &str = r#"# jany: put the assembled command on the next prompt instead of running it
@@ -65,4 +83,12 @@ function jany
     or return $status
     test -n "$__jany_cmd"; and commandline -r -- "$__jany_cmd"
 end
+
+function __jany_complete
+    set -l __jany_words (commandline -opc)
+    set -e __jany_words[1]
+    set -a __jany_words (commandline -ct)
+    command jany --complete -- $__jany_words | string replace -r '\t.*$' ''
+end
+complete -c jany -f -a '(__jany_complete)'
 "#;

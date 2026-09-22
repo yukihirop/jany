@@ -4,6 +4,10 @@ version = "0.1.0"
 edition = "2024"
 description = "jev x any command: turn loosely ordered words into a command line, defined per command by a schema"
 license = "MIT"
+repository = "https://github.com/yukihirop/jany"
+readme = "README.md"
+keywords = ["cli", "command-line", "shell", "natural-language"]
+categories = ["command-line-utilities"]
 
 [dependencies]
 serde = { version = "1", features = ["derive"] }

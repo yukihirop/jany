@@ -62,9 +62,13 @@ One jev call is 200–700 ms and under $0.0001.
 ## Setup
 
 ```sh
-cargo install --path .      # not on crates.io yet
+cargo install jany          # after the crates.io release
+# Before the release, install from this checkout:
+cargo install --path .
 jany --setup                  # store your OpenRouter API key in ~/.config/jany/config.toml (0600)
 echo 'eval "$(jany --init zsh)"' >> ~/.zshrc     # bash and fish too; bash is untested
+# optional: use `j` as a personal alias for `jany`, with the same completion
+printf '%s\n' "alias j='jany'" 'compdef _jany_complete j' >> ~/.zshrc
 ```
 
 `jany --init` does three things: prints the wrapper function, installs the built-in definitions (`find`, `curl`, `docker run`) into `~/.config/jany/cmd/`, and installs the `/jany-register` skill into `~/.agents/skills/` (linked from `~/.claude/skills/` and `~/.codex/skills/` when those exist). It never overwrites a definition you have edited.

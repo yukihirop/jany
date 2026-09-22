@@ -4,7 +4,7 @@
 use crate::error::JanyError;
 use regex::Regex;
 use serde::Deserialize;
-use std::collections::{BTreeMap, HashMap};
+use std::collections::{hash_map::Entry, BTreeMap, HashMap};
 use std::path::{Path, PathBuf};
 
 #[derive(Debug, Clone, Deserialize)]
@@ -407,9 +407,9 @@ impl Schema {
             pats.extend(q.when.regex.clone());
         }
         for p in pats {
-            if !self.regexes.contains_key(&p) {
-                let re = Regex::new(&p).map_err(|e| JanyError::Schema(format!("regex `{p}`: {e}")))?;
-                self.regexes.insert(p, re);
+            if let Entry::Vacant(entry) = self.regexes.entry(p) {
+                let re = Regex::new(entry.key()).map_err(|e| JanyError::Schema(format!("regex `{}`: {e}", entry.key())))?;
+                entry.insert(re);
             }
         }
         Ok(())

@@ -213,15 +213,14 @@ pub fn cond_ok(c: &Cond, t: &Token, chained: Option<bool>) -> bool {
 /// answers をトークンに書き戻す。規則で決まっていた語は role を触らないが、
 /// amount の向き(`atleast`)は規則で決まった語にも書く(`a week`)。
 pub fn apply(schema: &Schema, tokens: &mut [Token], answers: &Answers) {
-    for i in 0..tokens.len() {
-        let was_resolved = tokens[i].resolved();
+    for (i, t) in tokens.iter_mut().enumerate() {
+        let was_resolved = t.resolved();
         if !was_resolved {
             let Some(a) = answers.get(&format!("role.{i}")) else { continue };
             let Some(role) = a.choice().map(str::to_string) else { continue };
             if schema.role(&role).is_none() {
                 continue;
             }
-            let t = &mut tokens[i];
             t.role = Some(role.clone());
             t.confidence = a.certainty();
             t.source = Source::Jev;
@@ -266,7 +265,6 @@ pub fn apply(schema: &Schema, tokens: &mut [Token], answers: &Answers) {
         }
 
         // 向き(規則で決まった語にも)。
-        let t = &mut tokens[i];
         if let Some(mut am) = t.amount.clone()
             && am.at_least.is_none()
             && t.role.as_deref().and_then(|r| schema.role(r)).and_then(|r| r.amount.as_deref()).is_some_and(|d| d != "count")
@@ -282,7 +280,6 @@ pub fn apply(schema: &Schema, tokens: &mut [Token], answers: &Answers) {
 
         // sets.tag (typed など): applies_to の役割で noul > 0.5 ならタグ。
         for q in schema.questions.iter().filter(|q| q.sets.is_some()) {
-            let t = &mut tokens[i];
             if q.applies_to.as_deref().is_some_and(|r| t.is(r))
                 && let Some(p) = answers.get(&format!("{}.{i}", q.key)).and_then(|a| a.noul())
                 && p > 0.5
