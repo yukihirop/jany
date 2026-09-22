@@ -4,17 +4,19 @@ jind(jev × find、`../jind`)と jurl(jev × curl、`../jurl`)を汎化した 1 
 
 ## いまの状態
 
+- **`design/` → `examples/`、`HOST.md` → `docs/`**(2026-09-22、ユーザー選択): 「design」はコードが無かった頃の名残。`examples/{find,curl,docker/run}` は組み込み定義の原本で、バイナリに埋め込まれ、スキルの examples と `--init` の配布元を兼ねる。あなたの定義(`~/.config/jany/cmd/tar` など)はリポジトリに入れない
+
 - **2026-09-22 に `jx` → `jany` に改名**(crates.io に `jx` `jv` が既にあった。`jany` = jev × any、空きを確認して /ask で選択)。crate / バイナリ / `~/.config/jany` / `JANY_*` / `/jany-register` / `JanyError` を一括置換。GitHub リポジトリ名とローカルのディレクトリ名は別途
 
-- **Rust ホストが動く**(2026-09-22)。`src/` 16 ファイル。`JANY_CMD_DIR=design cargo run -- test find` 8/8、`test curl` 30/30。実機で jev を呼んで `find empty folders depth 2 count` → `find . -maxdepth 2 -type d -empty | wc -l` が stdout に出ることを確認。リモートは `https://github.com/yukihirop/jany`(private、2026-09-22 作成)。README / LICENSE あり
+- **Rust ホストが動く**(2026-09-22)。`src/` 16 ファイル。`JANY_CMD_DIR=examples cargo run -- test find` 8/8、`test curl` 30/30。実機で jev を呼んで `find empty folders depth 2 count` → `find . -maxdepth 2 -type d -empty | wc -l` が stdout に出ることを確認。リモートは `https://github.com/yukihirop/jany`(private、2026-09-22 作成)。README / LICENSE あり
 - `src/` の由来: `jev/{mod,client}.rs` `color.rs` `setup.rs` `config.rs` は jind からほぼコピー。`rules.rs` `questions.rs` `repair.rs` `amount.rs` `schema.rs` `assemble.rs` `interpret.rs` `testrun.rs` `init.rs` は schema 駆動で書き直したもの。jind/jurl は参考であって依存ではない
 - `jany --init zsh` は**実機で確認済み**(2026-09-22、ユーザー): `.zshrc`(実体 `~/dotfiles/.zshrc`)に `eval "$(jany --init zsh)"` を入れ、`jany find log files older than 7 days` → 次のプロンプトに `find . -type f -iname '*.log' -mtime +7` が載った。`jany --list` などjany 自身の操作はラッパーが素通しする。bash の `\e[5n` トリックは `bash -n` で構文だけ確認、fish は手元に無く未確認
-- **`/jany-register` スキルと `jany --register`**(2026-09-22): スキル本体は `skill/jany-register/{SKILL.md, reference.md, template/}` にあり、`include_str!` でバイナリに埋め込む(examples は `design/find` `design/curl` そのもの)。`jany --init <shell>` がラッパーを stdout に出すついでに `~/.agents/skills/jany-register/` に書き(`JANY_SKILL_DIR` で変更可、中身が同じなら何もしない)、`~/.claude/skills/` `~/.codex/skills/` が既にあってその名前が無ければ symlink を置く。**Codex が `~/.agents/skills` を読むかは確かめていない**(symlink はそのための保険)。`jany --register <name> [sub]` は雛形 3 ファイルを置くだけ(既存があれば止まる)。**組み込みの 3 定義(find / curl / docker run)も `jany --init` が `~/.config/jany/cmd/` に置く**(`design/` を `include_str!` で埋め込み。`schema.toml` が既にあるディレクトリは触らないので、design/ を直したら `jany --init` では更新されない。手で消すかコピーする)。`design/` はリポジトリ内の原本で、実行時に読むのは `~/.config/jany/cmd/`
-- **`design/docker/run/`**(2026-09-22): スキルの手順で書いた 3 つ目の定義。cases 16/16。書いて分かったことは `design/HOST.md`「docker run を書いて分かったこと」(ホストに足したのは `next` の table 補正 1 つ)
+- **`/jany-register` スキルと `jany --register`**(2026-09-22): スキル本体は `skill/jany-register/{SKILL.md, reference.md, template/}` にあり、`include_str!` でバイナリに埋め込む(examples は `examples/find` `examples/curl` そのもの)。`jany --init <shell>` がラッパーを stdout に出すついでに `~/.agents/skills/jany-register/` に書き(`JANY_SKILL_DIR` で変更可、中身が同じなら何もしない)、`~/.claude/skills/` `~/.codex/skills/` が既にあってその名前が無ければ symlink を置く。**Codex が `~/.agents/skills` を読むかは確かめていない**(symlink はそのための保険)。`jany --register <name> [sub]` は雛形 3 ファイルを置くだけ(既存があれば止まる)。**組み込みの 3 定義(find / curl / docker run)も `jany --init` が `~/.config/jany/cmd/` に置く**(`examples/` を `include_str!` で埋め込み。`schema.toml` が既にあるディレクトリは触らないので、examples/ を直したら `jany --init` では更新されない。手で消すかコピーする)。`examples/` はリポジトリ内の原本で、実行時に読むのは `~/.config/jany/cmd/`
+- **`examples/docker/run/`**(2026-09-22): スキルの手順で書いた 3 つ目の定義。cases 16/16。書いて分かったことは `docs/HOST.md`「docker run を書いて分かったこと」(ホストに足したのは `next` の table 補正 1 つ)
 - clippy の style 警告 2 件(needless_range_loop / contains_key+insert)は放置。`src/` は 18 ファイル
 - 2026-09-22 に `~/JavaScriptProjects/jany` から `~/RustProjects/jany` へ移動した(ホストを Rust にすると決めたため)
-- `design/find/` は jind 0.1.0 を定義ファイル 3 つに書き直したもの。`assemble.sh` は実際に動かして jind の README の例 6 本 + 衝突 1 本で同じ argv が出ることを確認済み
-- `design/curl/` は jurl 0.1.2 を同じ 3 つに書き直したもの(2026-09-22)。`assemble.sh` は jurl の `-n --no-jev` 実出力 16 本 + interpret.rs / EXAMPLES の jev 例 7 本で同じ argv。規則は Python で最小エンジンを書いて `jurl --explain` の role 列と 18 本一致(scratch、リポジトリには入れていない)。DSL に足したものは `design/HOST.md`「curl を書いて分かったこと」
+- `examples/find/` は jind 0.1.0 を定義ファイル 3 つに書き直したもの。`assemble.sh` は実際に動かして jind の README の例 6 本 + 衝突 1 本で同じ argv が出ることを確認済み
+- `examples/curl/` は jurl 0.1.2 を同じ 3 つに書き直したもの(2026-09-22)。`assemble.sh` は jurl の `-n --no-jev` 実出力 16 本 + interpret.rs / EXAMPLES の jev 例 7 本で同じ argv。規則は Python で最小エンジンを書いて `jurl --explain` の role 列と 18 本一致(scratch、リポジトリには入れていない)。DSL に足したものは `docs/HOST.md`「curl を書いて分かったこと」
 
 ## 決まっていること(2026-09-22、ユーザーが選択)
 
@@ -35,18 +37,18 @@ jind(jev × find、`../jind`)と jurl(jev × curl、`../jurl`)を汎化した 1 
   cases.toml     words → argv のテスト。jev の答えは Mock で書く。`jany --test <name>` が回す
 ```
 
-ホストが持つ部品と schema が持つものの境界は `design/HOST.md` に表でまとめてある。要点:
+ホストが持つ部品と schema が持つものの境界は `docs/HOST.md` に表でまとめてある。要点:
 
 - ホスト組み込みの match: `prefix / word / table / builtin(path_like, glob, existing_dir, amount, unit_word)`、when: `prev_role / prev_is_number / not_amount / has_unit / has_direction`
 - repair プリミティブ: `attach_unit`、`claim {marker, role, side, many, from, skip, require, clear}`。jind の 3 本はこれで書けた
 - `risk = "dangerous"` を assemble が返したら `-y` でも必ず確認・既定 No・`preview` argv を先に回して `preview_lines` 件見せる(jind の delete の安全弁を一般化したもの)。`risk = "unsafe"`(jurl の PUT/PATCH/DELETE)は閾値を `confirm_below_unsafe` に上げるだけで `-y` は効く
-- **jany はコマンドを実行しない**(決定 2026-09-22、ユーザー): 未知のコマンドを扱うので、Y の後に spawn せず、shell-quote した 1 行を stdout に出し、`eval "$(jany --init zsh)"` のラッパー(`print -z`)がシェルの入力行に置く。Enter は人が押す。`-y` / `confirm_below` / `[Y/n/e]` / `$EDITOR` は無し、`reject_below` だけ残す。`postprocess = "count_lines"` は `pipe = ["wc", "-l"]` に(`find … | wc -l` を入力行に載せる)。`risk = "dangerous"` の preview だけ read-only の実行として残す(schema に `preview_readonly = true` を書かせる)。詳細は `design/HOST.md`「出力」行
+- **jany はコマンドを実行しない**(決定 2026-09-22、ユーザー): 未知のコマンドを扱うので、Y の後に spawn せず、shell-quote した 1 行を stdout に出し、`eval "$(jany --init zsh)"` のラッパー(`print -z`)がシェルの入力行に置く。Enter は人が押す。`-y` / `confirm_below` / `[Y/n/e]` / `$EDITOR` は無し、`reject_below` だけ残す。`postprocess = "count_lines"` は `pipe = ["wc", "-l"]` に(`find … | wc -l` を入力行に載せる)。`risk = "dangerous"` の preview だけ read-only の実行として残す(schema に `preview_readonly = true` を書かせる)。詳細は `docs/HOST.md`「出力」行
 
 ## 次にやること
 
-1. ~~jurl を `design/curl/` に書き直す~~ 済(2026-09-22)。予想どおり `pair` / `join` の 2 プリミティブ、2 語規則は `next`、have_method/have_url は `once`、Header は role の `mask` で表した
+1. ~~jurl を `examples/curl/` に書き直す~~ 済(2026-09-22)。予想どおり `pair` / `join` の 2 プリミティブ、2 語規則は `next`、have_method/have_url は `once`、Header は role の `mask` で表した
 2. ~~jurl の出力側を jany に持ち込むか~~ 決定(2026-09-22、ユーザー): **持ち込まない**。jany curl は curl の argv を作って実行し stdout をそのまま出す。整形は `| jq`。jurl 本体は残るので機能が消えるわけではない
-3. ~~Rust ホストを書く~~ 済(2026-09-22)。find 8 + curl 30 の cases が通る。直したこと: cases が chdir するので `Schema.dir` は canonicalize、サブコマンド解決は `/` や `.` を含む語で止める(`jany find /var/log …` が `design/find//var/log` を探しに行った)、find の cases 2 本を直した(delete に `risk`/`preview` が無かった、"mp4" は英字だけでないので typo 質問は聞かれない = jind `prompt.rs:93` と同じ)
+3. ~~Rust ホストを書く~~ 済(2026-09-22)。find 8 + curl 30 の cases が通る。直したこと: cases が chdir するので `Schema.dir` は canonicalize、サブコマンド解決は `/` や `.` を含む語で止める(`jany find /var/log …` が `examples/find//var/log` を探しに行った)、find の cases 2 本を直した(delete に `risk`/`preview` が無かった、"mp4" は英字だけでないので typo 質問は聞かれない = jind `prompt.rs:93` と同じ)
 4. `jany --init zsh` を対話シェルで試す(`eval "$(jany --init zsh)"` を .zshrc に入れて `jany find …` → 入力行に載るか)
 5. ~~`/jany-register` スキルを書き、docker run で試す~~ 済(2026-09-22)。ただし試したのは「Claude Code がスキルの手順に沿って自分で書く」であって、`/jany-register docker run` をスキルとして呼んだわけではない。**未検証: 実際に `jany --init zsh` を本物の HOME で実行してスキルが Claude Code / Codex に見えるか、`/jany-register <name>` で一発で通る定義が出るか**
 6. ~~インストールと実機確認~~ 済(2026-09-22)。`cargo install --path .`、`.zshrc` に `eval "$(jany --init zsh)"`、`~/.config/jany/cmd/{find,curl,docker/run}` と `~/.agents/skills/jany-register`(+ `~/.claude/skills` `~/.codex/skills` の symlink)ができ、Claude Code のスキル一覧に `jany-register` が出た。Codex 側は未確認

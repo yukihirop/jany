@@ -1,4 +1,4 @@
-//! `~/.config/jany/cmd/<name>[/<sub>]/schema.toml` の形。意味は design/HOST.md。
+//! `~/.config/jany/cmd/<name>[/<sub>]/schema.toml` の形。意味は docs/HOST.md。
 //! ここでは読むだけで解釈しない(解釈は rules / questions / repair)。
 
 use crate::error::JanyError;

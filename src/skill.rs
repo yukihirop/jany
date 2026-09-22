@@ -5,38 +5,38 @@
 use crate::error::JanyError;
 use std::path::{Path, PathBuf};
 
-/// 配布するファイル。examples は design/ の find・curl そのもの。
+/// 配布するファイル。examples は examples/ の find・curl そのもの。
 const FILES: &[(&str, &str)] = &[
     ("SKILL.md", include_str!("../skill/jany-register/SKILL.md")),
     ("reference.md", include_str!("../skill/jany-register/reference.md")),
     ("template/schema.toml", include_str!("../skill/jany-register/template/schema.toml")),
     ("template/assemble.sh", include_str!("../skill/jany-register/template/assemble.sh")),
     ("template/cases.toml", include_str!("../skill/jany-register/template/cases.toml")),
-    ("examples/find/schema.toml", include_str!("../design/find/schema.toml")),
-    ("examples/find/assemble.sh", include_str!("../design/find/assemble.sh")),
-    ("examples/find/cases.toml", include_str!("../design/find/cases.toml")),
-    ("examples/curl/schema.toml", include_str!("../design/curl/schema.toml")),
-    ("examples/curl/assemble.sh", include_str!("../design/curl/assemble.sh")),
-    ("examples/curl/cases.toml", include_str!("../design/curl/cases.toml")),
+    ("examples/find/schema.toml", include_str!("../examples/find/schema.toml")),
+    ("examples/find/assemble.sh", include_str!("../examples/find/assemble.sh")),
+    ("examples/find/cases.toml", include_str!("../examples/find/cases.toml")),
+    ("examples/curl/schema.toml", include_str!("../examples/curl/schema.toml")),
+    ("examples/curl/assemble.sh", include_str!("../examples/curl/assemble.sh")),
+    ("examples/curl/cases.toml", include_str!("../examples/curl/cases.toml")),
 ];
 
 /// 組み込みのコマンド定義。`jany --init` が `~/.config/jany/cmd/<name>/` にまだ無いものだけ置く。
-/// 中身は design/ の原本そのもの(examples と同じ)。
+/// 中身は examples/ の原本そのもの(examples と同じ)。
 const COMMANDS: &[(&str, &[(&str, &str)])] = &[
     ("find", &[
-        ("schema.toml", include_str!("../design/find/schema.toml")),
-        ("assemble.sh", include_str!("../design/find/assemble.sh")),
-        ("cases.toml", include_str!("../design/find/cases.toml")),
+        ("schema.toml", include_str!("../examples/find/schema.toml")),
+        ("assemble.sh", include_str!("../examples/find/assemble.sh")),
+        ("cases.toml", include_str!("../examples/find/cases.toml")),
     ]),
     ("curl", &[
-        ("schema.toml", include_str!("../design/curl/schema.toml")),
-        ("assemble.sh", include_str!("../design/curl/assemble.sh")),
-        ("cases.toml", include_str!("../design/curl/cases.toml")),
+        ("schema.toml", include_str!("../examples/curl/schema.toml")),
+        ("assemble.sh", include_str!("../examples/curl/assemble.sh")),
+        ("cases.toml", include_str!("../examples/curl/cases.toml")),
     ]),
     ("docker/run", &[
-        ("schema.toml", include_str!("../design/docker/run/schema.toml")),
-        ("assemble.sh", include_str!("../design/docker/run/assemble.sh")),
-        ("cases.toml", include_str!("../design/docker/run/cases.toml")),
+        ("schema.toml", include_str!("../examples/docker/run/schema.toml")),
+        ("assemble.sh", include_str!("../examples/docker/run/assemble.sh")),
+        ("cases.toml", include_str!("../examples/docker/run/cases.toml")),
     ]),
 ];
 

@@ -1,6 +1,6 @@
 # jany ホストが持つもの / schema が持つもの (2026-09-22 時点の設計メモ)
 
-jind 0.1.0 を `design/find/`、jurl 0.1.2 を `design/curl/` の 3 ファイルずつに書き直して確かめた結果。
+jind 0.1.0 を `examples/find/`、jurl 0.1.2 を `examples/curl/` の 3 ファイルずつに書き直して確かめた結果。
 
 ## ホスト (Rust、jind/jurl から流用)
 

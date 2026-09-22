@@ -58,7 +58,7 @@ pub fn path() -> Option<PathBuf> {
     config_dir().map(|d| d.join("config.toml"))
 }
 
-/// コマンド定義の置き場。`JANY_CMD_DIR` があればそこ(開発中は `design/` を指す)。
+/// コマンド定義の置き場。`JANY_CMD_DIR` があればそこ(開発中は `examples/` を指す)。
 pub fn cmd_dir() -> Option<PathBuf> {
     if let Ok(p) = std::env::var("JANY_CMD_DIR") {
         return Some(PathBuf::from(p));
