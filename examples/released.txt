@@ -1,0 +1,34 @@
+# Every version of the built-in definitions that jany has shipped, as `<command>/<file> <FNV-1a 64 hex>`.
+# `jany --update` replaces an installed file only when its hash is listed here (= the user has not edited it).
+# When examples/ changes, `cargo test` fails and prints the line to append. Never remove lines.
+find/schema.toml 6e6c575cf0fbc2f3
+find/schema.toml 28ff9212c00a9c90
+find/schema.toml b651741b50a28b25
+find/schema.toml ff7e95ca57e72b0f
+find/schema.toml 8a88a5e06797409b
+find/assemble.sh 28e9bd4a9aefc7d2
+find/assemble.sh 6f6df56aa033abf4
+find/assemble.sh efb5b609a787ee88
+find/assemble.sh bfc6f05dd405f056
+find/cases.toml 30f8f69400695596
+find/cases.toml fef86de9f0ad7343
+find/cases.toml 22d5a00230536d64
+find/cases.toml c4ac52914695f093
+find/cases.toml 2a8909b26260a6cf
+curl/schema.toml 1a495924509b387f
+curl/schema.toml c809c7ce79f199c9
+curl/schema.toml 04e04395f55f4d65
+curl/schema.toml 1f5db16100d54989
+curl/assemble.sh ce8c32ae06e7a7c3
+curl/assemble.sh 37edf406ab7ce9c6
+curl/assemble.sh b8c36eda4fbaf188
+curl/cases.toml e246b605a88e22de
+curl/cases.toml 93a6e1e40e4391a8
+docker/run/schema.toml bb746804f3581fe4
+docker/run/schema.toml 007d5bf83ad36c2c
+docker/run/schema.toml dad92551b98e1bf9
+docker/run/assemble.sh 3a40fe93294ff1e8
+docker/run/assemble.sh 3257cc2ee44c9382
+docker/run/cases.toml 808f3b0610363c86
+docker/run/cases.toml f33012b5dec16f50
+docker/run/cases.toml 0dec656c29a9c519

@@ -15,6 +15,7 @@ mod rules;
 mod schema;
 mod setup;
 mod skill;
+mod suggest;
 mod testrun;
 mod token;
 
@@ -27,15 +28,20 @@ jany — jev x any command. Turn loosely ordered words into a command line.
 usage: jany <command> [words ...] [flags] [-- passthrough args]
        jany --init <zsh|bash|fish> [--locale en|ja]
                                    print the shell wrapper (eval \"$(jany --init zsh)\");
-                                   also installs the /jany-register skill to ~/.agents/skills
+                                   also installs the /jany-register and /jany-update skills to ~/.agents/skills
                                    (in English, or Japanese with --locale ja)
                                    and the built-in commands (find, curl, docker run) to ~/.config/jany/cmd
        jany --register <name> [sub] [--locale en|ja]
                                    scaffold ~/.config/jany/cmd/<name>/ (then: /jany-register <name>)
+       jany --update [name] [sub] [--locale en|ja]
+                                   update the built-in commands you have not edited, and tell
+                                   what the others lack (then: /jany-update <name>);
+                                   also installs the skills that are missing
        jany --test <command> [sub]   run cases.toml of a command definition
        jany --setup                  save your OpenRouter API key
        jany --list                   show the command definitions found
        jany --complete -- [words]    print shell completion candidates
+       jany --suggest -- [words]     print the dim hint for the words still to say (zsh)
 
 jany's own actions are flags so that <command> is always the tool's name.
 
@@ -54,7 +60,8 @@ env:
   JEV_MODEL            default typesafe/jev-1.13
   JANY_CMD_DIR           where command definitions live (default ~/.config/jany/cmd)
   JANY_CONFIG_DIR        default ~/.config/jany
-  JANY_SKILL_DIR         where `jany --init` puts the skill (default ~/.agents/skills/jany-register)
+  JANY_SKILL_DIR         where `jany --init` puts the skill (default ~/.agents/skills/jany-register;
+                         /jany-update goes next to it)
   JANY_NO_JEV=1          same as --no-jev
 ";
 
@@ -65,7 +72,7 @@ struct Opts {
     hint: bool,
     /// Language of the skill and scaffold for --init / --register.
     locale: Option<skill::Locale>,
-    /// jany's own action (--init / --register / --test / --setup / --list). It is a flag so that <command> is always the tool's name.
+    /// jany's own action (--init / --register / --update / --test / --setup / --list). It is a flag so that <command> is always the tool's name.
     action: Option<String>,
 }
 
@@ -87,6 +94,11 @@ fn run(args: Vec<String>) -> Result<i32, JanyError> {
         let typed = args.iter().position(|a| a == "--").map(|i| &args[i + 1..]).unwrap_or(&[]);
         let cmd_dir = config::cmd_dir().ok_or_else(|| JanyError::Config("cannot determine command dir (HOME unset)".into()))?;
         return Ok(complete::run(&cmd_dir, typed));
+    }
+    if args.first().map(String::as_str) == Some("--suggest") {
+        let typed = args.iter().position(|a| a == "--").map(|i| &args[i + 1..]).unwrap_or(&[]);
+        let cmd_dir = config::cmd_dir().ok_or_else(|| JanyError::Config("cannot determine command dir (HOME unset)".into()))?;
+        return Ok(suggest::run(&cmd_dir, typed));
     }
     let mut opts = Opts::default();
     let mut words = Vec::new();
@@ -112,7 +124,7 @@ fn run(args: Vec<String>) -> Result<i32, JanyError> {
                 opts.locale = Some(skill::Locale::parse(&v)?);
             }
             s if s.starts_with("--locale=") => opts.locale = Some(skill::Locale::parse(&s["--locale=".len()..])?),
-            "--init" | "--register" | "--test" | "--setup" | "--list" => {
+            "--init" | "--register" | "--update" | "--test" | "--setup" | "--list" => {
                 if let Some(prev) = &opts.action {
                     return Err(JanyError::Usage(format!("{prev} and {a} together")));
                 }
@@ -136,8 +148,8 @@ fn run(args: Vec<String>) -> Result<i32, JanyError> {
         output::stdout(HELP);
         return Ok(0);
     }
-    if opts.locale.is_some() && !matches!(opts.action.as_deref(), Some("--init" | "--register")) {
-        return Err(JanyError::Usage("--locale only works with --init or --register".into()));
+    if opts.locale.is_some() && !matches!(opts.action.as_deref(), Some("--init" | "--register" | "--update")) {
+        return Err(JanyError::Usage("--locale only works with --init, --register or --update".into()));
     }
     let locale = opts.locale.unwrap_or_default();
     let cmd_dir = config::cmd_dir().ok_or_else(|| JanyError::Config("cannot determine command dir (HOME unset)".into()))?;
@@ -154,7 +166,7 @@ fn run(args: Vec<String>) -> Result<i32, JanyError> {
                         eprintln!("jany: installed {c}");
                     }
                 }
-                Err(e) => eprintln!("jany: could not install the jany-register skill: {e}"),
+                Err(e) => eprintln!("jany: could not install the skills: {e}"),
             }
             // Built-in definitions (find / curl / docker run). Only the missing ones are placed.
             match skill::install_commands(&cmd_dir) {
@@ -168,6 +180,18 @@ fn run(args: Vec<String>) -> Result<i32, JanyError> {
             return Ok(0);
         }
         "--register" => return skill::register(&cmd_dir, &words, locale),
+        "--update" => {
+            // /jany-update is what the report below points at, so make sure the skill is there.
+            match skill::install_missing(opts.locale) {
+                Ok(placed) => {
+                    for p in placed {
+                        eprintln!("jany: installed {p}");
+                    }
+                }
+                Err(e) => eprintln!("jany: could not install the skills: {e}"),
+            }
+            return skill::update(&cmd_dir, &words, &list(&cmd_dir));
+        }
         "--test" => {
             let (schema, used) = schema::resolve(&cmd_dir, &words)?;
             if used != words.len() {

@@ -30,6 +30,9 @@ pub struct Schema {
     pub defaults: toml::Table,
     #[serde(default)]
     pub confirm: Confirm,
+    /// Dim hints after `jany <name> ` in zsh (`jany --suggest`), in the order written.
+    #[serde(default)]
+    pub placeholders: Vec<Placeholder>,
 
     /// The directory it was loaded from (where assemble.sh is).
     #[serde(skip)]
@@ -44,6 +47,17 @@ pub struct Command {
     pub description: String,
     #[serde(default)]
     pub example: Option<String>,
+}
+
+/// One slot of the dim hint, e.g. `<path>`. Hidden once a word has any of `roles`.
+#[derive(Debug, Clone, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct Placeholder {
+    pub text: String,
+    pub roles: Vec<String>,
+    /// A word the rules could not decide (jev will) fills this slot, e.g. the bare `nginx` for `<image>`.
+    #[serde(default)]
+    pub bare: bool,
 }
 
 #[derive(Debug, Clone, Deserialize)]
@@ -432,6 +446,11 @@ impl Schema {
                 && !BUILTINS.contains(&b.as_str())
             {
                 return Err(JanyError::Schema(format!("unknown builtin `{b}` (one of {})", BUILTINS.join(", "))));
+            }
+        }
+        for p in &self.placeholders {
+            if let Some(r) = p.roles.iter().find(|r| !known.contains(&r.as_str())) {
+                return Err(JanyError::Schema(format!("placeholder `{}`: role `{r}` is not in [[roles]]", p.text)));
             }
         }
         Ok(())

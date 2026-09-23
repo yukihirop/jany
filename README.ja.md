@@ -81,7 +81,9 @@ echo 'eval "$(jany --init zsh --locale ja)"' >> ~/.zshrc     # bash と fish も
 printf '%s\n' "alias j='jany'" 'compdef _jany_complete j' >> ~/.zshrc
 ```
 
-`jany --init` は 3 つのことをする: ラッパー関数を出力する、組み込みの定義(`find`、`curl`、`docker run`)を `~/.config/jany/cmd/` に置く、`/jany-register` スキルを `~/.agents/skills/` に置く(`~/.claude/skills/` と `~/.codex/skills/` があればそこからリンクする)。あなたが編集した定義は上書きしない。スキルは既定で英語版。日本語版は `--locale ja` で置く。`--init` はシェルを開くたびにスキルを書き直すので、フラグは rc の行に書いておく(上の例のように)。
+`jany --init` は 3 つのことをする: ラッパー関数を出力する、組み込みの定義(`find`、`curl`、`docker run`)を `~/.config/jany/cmd/` に置く、`/jany-register` と `/jany-update` のスキルを `~/.agents/skills/` に置く(`~/.claude/skills/` と `~/.codex/skills/` があればそこからリンクする)。すでにある定義は上書きしない。スキルは既定で英語版。日本語版は `--locale ja` で置く。`--init` はシェルを開くたびにスキルを書き直すので、フラグは rc の行に書いておく(上の例のように)。
+
+zsh では、`jany <command> ` の後ろに、まだ言えることを薄く出す(定義の `[[placeholders]]`)。例: `jany find src ` → `<file|dir> <*.log> <older than N days> <delete|count>`。jev は呼ばない。`JANY_SUGGEST=0` で消える。bash と fish には無い。
 
 環境変数の `OPENROUTER_API_KEY` が優先される。`jind setup` や `jurl setup` で保存したキーも拾う。macOS の zsh で確認している。
 
@@ -105,6 +107,8 @@ jany 自身の操作はフラグなので、`<command>` は常にツール名に
 | `jany --list` | 見つかった定義と、それぞれの例 |
 | `jany --test find` | 定義の `cases.toml` を回す(jev の答えはモック) |
 | `/jany-register tar` | エージェントのスキルで `~/.config/jany/cmd/tar/` を作って埋める |
+| `jany --update` | jany を上げた後に: 手を入れていない組み込み定義を置き換え、他の定義に足りないものを一覧し、無いスキルを置く |
+| `/jany-update tar` | エージェントのスキルで、定義に足りないものだけを足す。既存の規則と cases はそのまま |
 | `jany --init zsh\|bash\|fish` | ラッパーと、組み込み定義とスキル(`--locale en\|ja`、既定は `en`) |
 | `jany --setup` | API キーを保存する |
 
@@ -125,6 +129,17 @@ jany --test tar
 | `cases.toml` | 語 → 期待する argv と、書き下した jev の答え。jany が聞いていない質問への答えは `jany --test` が受け付けない |
 
 スキルは書く前に、schema の全キーのリファレンスと 2 つの実例(`find`、`curl`)を読む。jind と jurl の経験則はそのまま使える: 実際に打つ 8 割を載せ、残りは `--` の後ろで素通しし、cases の無い `assemble.sh` は信用しない。
+
+## 定義を新しくする
+
+新しい jany では定義の機能(`[[placeholders]]` など)や組み込み定義が増えることがある。ただし `jany --init` は、すでにある定義には触らない。jany を上げたら次を実行する:
+
+```sh
+jany --update                 # 手を入れていない組み込み定義は置き換わり、残りは一覧に出る
+/jany-update tar              # Claude Code か Codex で: tar に足りないものを足し、jany --test tar まで回す
+```
+
+組み込み定義に手が入っていないかは、全ファイルが jany の出した版のどれかと一致するかで判断する(`examples/released.txt`)。編集済みの組み込み定義はそのまま残し、あなたの定義と同じく一覧に出す。`/jany-update` は、あなたの編集を残したまま新しい部分を取り込む。`/jany-update` スキル自体が無ければ `jany --update` が置く(言語は置いてある `/jany-register` に合わせる。`--locale en|ja` でも選べる)。すでにあるスキルのファイルは触らない。
 
 ## 設定(任意)
 

@@ -48,6 +48,12 @@ note  = "raw flag"
 # role = "exclude"
 # from = ["path", "unresolved"]
 
+# Dim hint zsh shows after `jany __NAME__ `: slots in the order people say them. A slot disappears once a word takes one of its roles.
+# [[placeholders]]
+# text  = "<path>"
+# roles = ["path"]
+# bare  = true
+
 [assemble]
 script = "assemble.sh"
 

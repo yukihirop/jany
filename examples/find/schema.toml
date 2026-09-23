@@ -299,6 +299,30 @@ skip = ["noise"]
 # ---------------------------------------------------------------------------
 # 組み立て。assemble.sh が argv を作る。ホストは実行せず、シェルの入力行に置く。
 # ---------------------------------------------------------------------------
+# ---------------------------------------------------------------------------
+# 薄い候補 (zsh)。`jany find ` の後ろに、まだどの語も埋めていない枠を書いた順に出す。規則で決まらない数は量の役割の枠を埋める
+# ---------------------------------------------------------------------------
+[[placeholders]]
+text  = "<path>"
+roles = ["path"]
+
+[[placeholders]]
+text  = "<file|dir>"
+roles = ["type"]
+
+[[placeholders]]
+text  = "<*.log>"
+roles = ["name_pattern", "extension", "name_word"]
+bare  = true   # 規則で決まらない語 (jev に回る語) はこの枠を埋めたとみなす
+
+[[placeholders]]
+text  = "<older than N days>"
+roles = ["time_amount"]
+
+[[placeholders]]
+text  = "<delete|count>"
+roles = ["action"]
+
 [assemble]
 script = "assemble.sh"                 # stdin: {tokens, passthrough, answers, defaults} / stdout: {argv, preview, risk, pipe, error}
 

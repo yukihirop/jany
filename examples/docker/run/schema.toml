@@ -323,6 +323,30 @@ side = "before"
 from = ["cpus", "memory", "unresolved"]
 require = { amount_without_unit = true }
 
+# ---------------------------------------------------------------------------
+# 薄い候補 (zsh)。`jany docker run ` の後ろに、まだどの語も埋めていない枠を書いた順に出す。規則で決まらない数は量の役割の枠を埋める
+# ---------------------------------------------------------------------------
+[[placeholders]]
+text  = "<image>"
+roles = ["image"]
+bare  = true   # 規則で決まらない語 (jev に回る語) はこの枠を埋めたとみなす
+
+[[placeholders]]
+text  = "<8080:80>"
+roles = ["port"]
+
+[[placeholders]]
+text  = "<./dir:/data>"
+roles = ["volume"]
+
+[[placeholders]]
+text  = "<detach|rm|shell>"
+roles = ["flag"]
+
+[[placeholders]]
+text  = "<name NAME>"
+roles = ["container_name"]
+
 [assemble]
 script = "assemble.sh"
 
