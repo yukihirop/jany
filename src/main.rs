@@ -49,7 +49,8 @@ jany never runs the command: it prints one shell-quoted line on stdout, and the
 wrapper from `jany --init` puts it on your prompt. Everything else goes to stderr.
 With `[cmd.<name>] autorun = true` in config.toml, the zsh wrapper runs the line
 instead when rules alone decided it and it is risk \"none\" (no jev, no words after
-`--`, no raw flags, no preview or pipe). It still goes into the shell history.
+`--`, no raw flags, no preview or pipe; `jany <command> -- --help` / `-- --version`
+alone is fine too). It still goes into the shell history.
 
 flags:
       --explain   show how each word was classified (stderr)

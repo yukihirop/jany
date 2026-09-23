@@ -64,11 +64,13 @@ impl Run {
     /// Whether the line may run without a look on the prompt (`[cmd.<name>] autorun = true`):
     /// rules alone decided every word, the definition calls it risk "none", nothing needs a preview
     /// or a pipe, and nothing went through unread (words after `--`, or raw flags the rules only
-    /// tagged with the `passthrough` role).
+    /// tagged with the `passthrough` role). The one exception is `jany <cmd> -- --help` / `-- --version`:
+    /// no words at all and that single long flag. Short -h / -v are not help everywhere (`df -h`).
     pub fn autorun_safe(&self, passthrough: &[String]) -> bool {
+        let help_only = self.tokens.is_empty() && matches!(passthrough, [p] if p == "--help" || p == "--version");
         self.jev.is_none()
             && self.tokens.iter().all(|t| t.source == crate::token::Source::Rule && !t.is("passthrough"))
-            && passthrough.is_empty()
+            && (passthrough.is_empty() || help_only)
             && self.out.risk == "none"
             && self.out.preview.is_none()
             && self.out.pipe.is_none()
@@ -102,7 +104,11 @@ mod tests {
         assert!(!run(&[("action", Source::Rule)], "dangerous").autorun_safe(&[]));
         assert!(!run(&[("action", Source::Rule), ("package", Source::Jev)], "none").autorun_safe(&[]));
         assert!(!run(&[("action", Source::Rule), ("passthrough", Source::Rule)], "none").autorun_safe(&[]));
-        assert!(!run(&[], "none").autorun_safe(&["--help".into()]));
+        assert!(run(&[], "none").autorun_safe(&["--help".into()]));
+        assert!(run(&[], "none").autorun_safe(&["--version".into()]));
+        assert!(!run(&[], "none").autorun_safe(&["-h".into()]));
+        assert!(!run(&[], "none").autorun_safe(&["store".into(), "prune".into()]));
+        assert!(!run(&[("action", Source::Rule)], "none").autorun_safe(&["--help".into()]));
         let mut piped = run(&[("action", Source::Rule)], "none");
         piped.out.pipe = Some(vec!["wc".into(), "-l".into()]);
         assert!(!piped.autorun_safe(&[]));
