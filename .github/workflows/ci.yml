@@ -19,3 +19,40 @@ jobs:
       - run: JANY_CMD_DIR=examples cargo run --locked -- --test curl
       - run: JANY_CMD_DIR=examples cargo run --locked -- --test docker run
       - run: cargo package --locked
+
+  # On main, publish the version in Cargo.toml when crates.io does not have it yet, then tag it and make a
+  # GitHub release. Auth is crates.io Trusted Publishing (crate settings → Trusted Publishing: yukihirop/jany,
+  # workflow ci.yml), so no API token is stored. Each step checks first, so a re-run finishes what a failed run left.
+  release:
+    needs: check
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      id-token: write
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - id: version
+        run: |
+          v=$(cargo metadata --no-deps --format-version 1 --locked | jq -r '.packages[] | select(.name == "jany") | .version')
+          code=$(curl -s -o /dev/null -w '%{http_code}' -H 'User-Agent: jany-release (github.com/yukihirop/jany)' "https://crates.io/api/v1/crates/jany/$v")
+          echo "version=$v" >> "$GITHUB_OUTPUT"
+          echo "published=$([ "$code" = 200 ] && echo true || echo false)" >> "$GITHUB_OUTPUT"
+          echo "jany $v on crates.io: HTTP $code"
+      - if: steps.version.outputs.published == 'false'
+        uses: rust-lang/crates-io-auth-action@v1
+        id: auth
+      - if: steps.version.outputs.published == 'false'
+        run: cargo publish --locked
+        env:
+          CARGO_REGISTRY_TOKEN: ${{ steps.auth.outputs.token }}
+      - name: tag and GitHub release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          V: ${{ steps.version.outputs.version }}
+        run: |
+          if ! git ls-remote --exit-code --tags origin "refs/tags/v$V" > /dev/null; then
+            git tag "v$V" && git push origin "v$V"
+          fi
+          gh release view "v$V" > /dev/null 2>&1 || gh release create "v$V" --title "v$V" --generate-notes --verify-tag

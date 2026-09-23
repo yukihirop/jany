@@ -39,7 +39,8 @@ _jany_complete() {
 compdef _jany_complete jany
 
 # dim hint after `jany <command> ` of what is still to say (the definition's [[placeholders]]).
-# Only lines starting with `jany ` (or an alias of it, like `j `) are touched. JANY_SUGGEST=0 turns it off.
+# Only lines starting with `jany ` (or an alias of it, like `j `) are touched. `[suggest] enabled = false`
+# in config.toml turns it off; JANY_SUGGEST=0/1 overrides that per shell (0 is checked here to skip starting jany).
 typeset -g _jany_suggest_buf="" _jany_suggest_text="" _jany_suggest_hl=""
 _jany_suggest() {
   local __jany_s="" __jany_w1

@@ -83,7 +83,7 @@ printf '%s\n' "alias j='jany'" 'compdef _jany_complete j' >> ~/.zshrc
 
 `jany --init` does three things: prints the wrapper function, installs the built-in definitions (`find`, `curl`, `docker run`) into `~/.config/jany/cmd/`, and installs the `/jany-register` and `/jany-update` skills into `~/.agents/skills/` (linked from `~/.claude/skills/` and `~/.codex/skills/` when those exist). It never overwrites a definition that is already there. The skills are in English by default; `jany --init zsh --locale ja` installs the Japanese one (put the flag in your rc line, since `--init` rewrites the skill on every shell start).
 
-In zsh the wrapper also shows a dim hint of what you can still say after `jany <command> ` (the definition's `[[placeholders]]`), e.g. `jany find src ` → `<file|dir> <*.log> <older than N days> <delete|count>`. It never calls jev. `JANY_SUGGEST=0` turns it off. bash and fish don't have it.
+In zsh the wrapper also shows a dim hint of what you can still say after `jany <command> ` (the definition's `[[placeholders]]`), e.g. `jany find src ` → `<file|dir> <*.log> <older than N days> <delete|count>`. It never calls jev. `[suggest] enabled = false` in `~/.config/jany/config.toml` turns it off; `JANY_SUGGEST=0` / `1` overrides that for one shell. bash and fish don't have it.
 
 `OPENROUTER_API_KEY` in the environment takes precedence; a key saved by `jind setup` or `jurl setup` is picked up too. Tested on macOS with zsh.
 
@@ -149,6 +149,9 @@ jany --update                 # built-ins you have not edited are replaced; the 
 [jev]
 model = "typesafe/jev-1.13"
 reject_below = 0.5           # below this, no command: exit non-zero and offer `--hint`
+
+[suggest]
+enabled = false              # no dim hint in zsh (JANY_SUGGEST=0/1 overrides it)
 
 [cmd.curl.defaults]          # overrides the schema's [defaults]
 content_type = "text/plain"
