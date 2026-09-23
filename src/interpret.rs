@@ -51,7 +51,7 @@ pub fn oracle_from_config(cfg: &Config) -> Result<jev::client::OpenRouter, JanyE
         .ok()
         .filter(|k| !k.is_empty())
         .or_else(|| cfg.jev.api_key.clone())
-        .ok_or_else(|| JanyError::Jev("no API key. run `jany setup` or set OPENROUTER_API_KEY (needed to interpret ambiguous words)".into()))?;
+        .ok_or_else(|| JanyError::Jev("no API key. run `jany --setup` or set OPENROUTER_API_KEY (needed to interpret ambiguous words)".into()))?;
     Ok(jev::client::OpenRouter {
         api_key,
         model: cfg.jev.model.clone(),

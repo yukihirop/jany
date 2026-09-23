@@ -1,4 +1,4 @@
-//! `jany setup`: OpenRouter の API キーを ~/.config/jany/config.toml の [jev] api_key に 0600 で保存し、
+//! `jany --setup`: OpenRouter の API キーを ~/.config/jany/config.toml の [jev] api_key に 0600 で保存し、
 //! jev に 1 回テスト呼び出しして疎通を確かめる。
 
 use crate::error::JanyError;
@@ -28,7 +28,7 @@ pub fn run() -> Result<i32, JanyError> {
     }
 
     if !std::io::stdin().is_terminal() {
-        return Err(JanyError::Usage("jany setup needs a terminal to read the key".into()));
+        return Err(JanyError::Usage("jany --setup needs a terminal to read the key".into()));
     }
     let key = rpassword::prompt_password("OpenRouter API key (input hidden): ")?;
     let key = key.trim().to_string();
