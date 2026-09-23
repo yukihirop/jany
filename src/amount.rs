@@ -1,10 +1,10 @@
-//! 量のパーサ(jind `rules::parse_amount` を schema の単位表で動かすもの)。
-//! `7` `7d` `+7d` `-2h` `>10M` `100MB` `<1k` → (向き, 数, 単位)。数が無ければ None。
+//! Amount parser (jind's `rules::parse_amount`, driven by the schema's unit table).
+//! `7` `7d` `+7d` `-2h` `>10M` `100MB` `<1k` → (direction, number, unit). None if there is no number.
 
 use crate::schema::Schema;
 use crate::token::Amount;
 
-/// 単位語 → 単位キー。`case_sensitive.suffixes` にある語は大文字小文字をそのまま比べ、それ以外は小文字で比べる。
+/// Unit word → unit key. Words in `case_sensitive.suffixes` are compared as-is; everything else is compared lowercased.
 pub fn unit_of_word(schema: &Schema, w: &str) -> Option<String> {
     let a = schema.amount.as_ref()?;
     let exact = a.case_sensitive.suffixes.iter().any(|s| s == w);
@@ -37,7 +37,7 @@ pub fn parse(schema: &Schema, w: &str) -> Option<Amount> {
     } else {
         match unit_of_word(schema, suffix) {
             Some(u) => Some(u),
-            // 曖昧な接尾辞(`m`)は単位なし扱いで jev に回す。それ以外の未知の接尾辞は数ではない。
+            // An ambiguous suffix (`m`) counts as no unit and goes to jev. Any other unknown suffix means it is not a number.
             None if schema.amount.as_ref().map(|a| a.ambiguous_suffixes.iter().any(|s| s == suffix)).unwrap_or(false) => None,
             None => return None,
         }

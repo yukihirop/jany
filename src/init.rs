@@ -1,5 +1,5 @@
-//! `jany --init <shell>`: jany の stdout(コマンド 1 行)をシェルの入力行に置くラッパー関数を出す。
-//! zoxide / fzf と同じ方式。`eval "$(jany --init zsh)"` を rc に書く。
+//! `jany --init <shell>`: prints a wrapper function that puts jany's stdout (one command line) on the shell's input line.
+//! The same approach as zoxide / fzf. Put `eval "$(jany --init zsh)"` in your rc.
 
 use crate::error::JanyError;
 
@@ -12,7 +12,7 @@ pub fn script(shell: &str) -> Result<&'static str, JanyError> {
     })
 }
 
-/// `print -z` は次のプロンプトの入力行にテキストを積む。
+/// `print -z` pushes text onto the input line of the next prompt.
 const ZSH: &str = r#"# jany: put the assembled command on the next prompt instead of running it
 jany() {
   local __jany_a __jany_cmd
@@ -36,8 +36,8 @@ _jany_complete() {
 compdef _jany_complete jany
 "#;
 
-/// bash は子プロセスから入力行を触れないので、キーシーケンス `\e[0n` にコマンドを束縛して
-/// `\e[5n`(端末状態要求)で端末に `\e[0n` を返させる。手元で未確認。
+/// bash cannot touch the input line from a child process, so bind the command to the key sequence `\e[0n`
+/// and make the terminal send `\e[0n` back with `\e[5n` (device status report). Not verified locally.
 const BASH: &str = r#"# jany: put the assembled command on the next prompt instead of running it
 jany() {
   local __jany_a __jany_cmd

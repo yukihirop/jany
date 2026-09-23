@@ -1,5 +1,5 @@
-//! assemble スクリプトの呼び出し。stdin に役割付きトークン、stdout から argv を受け取る。
-//! ホストはコマンドの意味を知らない。confidence の min だけここで取る。
+//! Calls the assemble script: role-tagged tokens on its stdin, argv back from its stdout.
+//! The host does not know what the command means. Only the minimum confidence is taken here.
 
 use crate::error::JanyError;
 use crate::jev::Answers;
@@ -31,7 +31,7 @@ fn default_risk() -> String {
     "none".into()
 }
 
-/// 全語に役割が付いていることを確かめてからスクリプトを呼ぶ。
+/// Checks that every word has a role, then calls the script.
 pub fn assemble(schema: &Schema, tokens: &[Token], passthrough: &[String], answers: &Answers, defaults: &toml::Table) -> Result<Assembled, JanyError> {
     let unresolved: Vec<&str> = tokens.iter().filter(|t| !t.resolved()).map(|t| t.text.as_str()).collect();
     if !unresolved.is_empty() {
@@ -83,7 +83,7 @@ pub fn assemble(schema: &Schema, tokens: &[Token], passthrough: &[String], answe
     Ok(a)
 }
 
-/// schema の [defaults] に user config の [cmd.<name>.defaults] を重ねる。
+/// Layers the user config's [cmd.<name>.defaults] over the schema's [defaults].
 pub fn merge_defaults(schema: &toml::Table, user: &toml::Table) -> toml::Table {
     let mut d = schema.clone();
     for (k, v) in user {

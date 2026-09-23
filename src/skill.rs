@@ -1,11 +1,11 @@
-//! `/jany-register` スキルの配布と `jany --register <name>` の雛形。
-//! スキル本体は `skills/<locale>/jany-register/`(en / ja)をバイナリに埋め込み、`jany --init` のたびに
-//! `~/.agents/skills/jany-register/` へ書く(Claude Code / Codex のどちらからも読める場所)。
+//! Ships the `/jany-register` skill and the `jany --register <name>` scaffold.
+//! The skill (`skills/<locale>/jany-register/`, en / ja) is embedded in the binary and written on every `jany --init`
+//! to `~/.agents/skills/jany-register/` (a place both Claude Code and Codex can read).
 
 use crate::error::JanyError;
 use std::path::{Path, PathBuf};
 
-/// スキルの言語。`jany --init <shell> --locale ja` で選ぶ。既定は en。
+/// The skill's language, chosen with `jany --init <shell> --locale ja`. Defaults to en.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
 pub enum Locale {
     #[default]
@@ -25,7 +25,7 @@ impl Locale {
     }
 }
 
-/// 言語ごとのスキル本体(`skills/<locale>/jany-register/`)。
+/// The skill for one language (`skills/<locale>/jany-register/`).
 macro_rules! skill_files {
     ($l:literal) => {
         &[
@@ -40,7 +40,7 @@ macro_rules! skill_files {
 const SKILL_EN: &[(&str, &str)] = skill_files!("en");
 const SKILL_JA: &[(&str, &str)] = skill_files!("ja");
 
-/// どの言語でも同じもの。examples は examples/ の find・curl そのもの。
+/// The same in every language. The examples are examples/find and examples/curl as-is.
 const SKILL_EXAMPLES: &[(&str, &str)] = &[
     ("examples/find/schema.toml", include_str!("../examples/find/schema.toml")),
     ("examples/find/assemble.sh", include_str!("../examples/find/assemble.sh")),
@@ -50,7 +50,7 @@ const SKILL_EXAMPLES: &[(&str, &str)] = &[
     ("examples/curl/cases.toml", include_str!("../examples/curl/cases.toml")),
 ];
 
-/// 配布するファイル(スキル本体 + examples)。
+/// The files to ship (the skill + examples).
 fn files(locale: Locale) -> impl Iterator<Item = &'static (&'static str, &'static str)> {
     let body = match locale {
         Locale::En => SKILL_EN,
@@ -59,8 +59,8 @@ fn files(locale: Locale) -> impl Iterator<Item = &'static (&'static str, &'stati
     body.iter().chain(SKILL_EXAMPLES)
 }
 
-/// 組み込みのコマンド定義。`jany --init` が `~/.config/jany/cmd/<name>/` にまだ無いものだけ置く。
-/// 中身は examples/ の原本そのもの(examples と同じ)。
+/// Built-in command definitions. `jany --init` places the ones not yet in `~/.config/jany/cmd/<name>/`.
+/// Their contents are the originals in examples/.
 const COMMANDS: &[(&str, &[(&str, &str)])] = &[
     ("find", &[
         ("schema.toml", include_str!("../examples/find/schema.toml")),
@@ -79,8 +79,8 @@ const COMMANDS: &[(&str, &[(&str, &str)])] = &[
     ]),
 ];
 
-/// まだ無い定義だけ置く。既に schema.toml があるディレクトリは(古くても)触らない。
-/// 戻り値は置いたディレクトリ。
+/// Places only missing definitions. A directory that already has a schema.toml is left alone (even if outdated).
+/// Returns the directories placed.
 pub fn install_commands(cmd_dir: &Path) -> Result<Vec<String>, JanyError> {
     let mut placed = Vec::new();
     for (name, files) in COMMANDS {
@@ -99,7 +99,7 @@ pub fn install_commands(cmd_dir: &Path) -> Result<Vec<String>, JanyError> {
     Ok(placed)
 }
 
-/// `JANY_SKILL_DIR`、無ければ `~/.agents/skills/jany-register`。
+/// `JANY_SKILL_DIR`, or else `~/.agents/skills/jany-register`.
 pub fn skill_dir() -> Option<PathBuf> {
     if let Some(d) = std::env::var_os("JANY_SKILL_DIR") {
         return Some(PathBuf::from(d));
@@ -108,7 +108,7 @@ pub fn skill_dir() -> Option<PathBuf> {
     Some(Path::new(&home).join(".agents").join("skills").join("jany-register"))
 }
 
-/// 中身が違うファイルだけ書き直す(言語を切り替えたら書き直される)。戻り値は書いたパスと作ったリンク。
+/// Rewrites only files whose contents differ (switching the language rewrites them). Returns the paths written and links made.
 pub fn install(locale: Locale) -> Result<Vec<String>, JanyError> {
     let dir = skill_dir().ok_or_else(|| JanyError::Config("cannot determine skill dir (HOME unset)".into()))?;
     let mut changed = Vec::new();
@@ -124,8 +124,8 @@ pub fn install(locale: Locale) -> Result<Vec<String>, JanyError> {
         set_executable(&p, rel.ends_with(".sh"))?;
         changed.push(p.display().to_string());
     }
-    // Claude Code / Codex がそれぞれのディレクトリしか見ない場合に備えてリンクを置く。
-    // ディレクトリが既にあって、その名前がまだ無いときだけ。
+    // Link from Claude Code's / Codex's own directories in case they only look there,
+    // but only when the directory exists and has nothing by that name yet.
     if let Some(home) = std::env::var_os("HOME") {
         for tool in [".claude", ".codex"] {
             let skills = Path::new(&home).join(tool).join("skills");
@@ -152,7 +152,7 @@ fn set_executable(p: &Path, on: bool) -> std::io::Result<()> {
     Ok(())
 }
 
-/// `jany --register <name> [sub…]`: 雛形 3 ファイルを置く。既にあれば触らない。
+/// `jany --register <name> [sub…]`: places the three scaffold files. Leaves existing ones alone.
 pub fn register(cmd_dir: &Path, names: &[String], locale: Locale) -> Result<i32, JanyError> {
     if names.is_empty() {
         return Err(JanyError::Usage("jany --register <name> [sub …]  e.g. jany --register docker run".into()));
@@ -163,7 +163,7 @@ pub fn register(cmd_dir: &Path, names: &[String], locale: Locale) -> Result<i32,
         }
     }
     let name = names.join(" ");
-    // argv の先頭は語ごとに分ける("docker run" → "docker", "run")。
+    // The head of argv is split per word ("docker run" → "docker", "run").
     let argv0 = names.iter().map(|n| format!("{n:?}")).collect::<Vec<_>>().join(", ");
     let dir = names.iter().fold(cmd_dir.to_path_buf(), |d, n| d.join(n));
     if dir.join("schema.toml").exists() {

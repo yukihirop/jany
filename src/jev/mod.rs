@@ -1,5 +1,4 @@
-//! jev(TypeSafe System One)への問い合わせ。ワイヤ形式は eg-jev の
-//! `packages/recipes/src/lib/questions.ts` / `openrouter.ts` に合わせている。
+//! Queries to jev (TypeSafe System One) through OpenRouter's Decisions API: questions and answers on the wire.
 
 pub mod client;
 
@@ -38,7 +37,7 @@ pub enum Answer {
     Noul {
         noul: f32,
     },
-    // Score は jind では使わないが、返ってきても壊れないように受ける。
+    // jany never asks for a Score, but accept one so an unexpected answer does not break parsing.
     Score {
         #[serde(default)]
         score: f32,
@@ -48,7 +47,7 @@ pub enum Answer {
 }
 
 impl Answer {
-    /// 型を問わず「確からしさ」を 1 つの数にする(eg-jev の pTrue と同じ発想。Noul には confidence が無い)。
+    /// One "how sure" number whatever the answer type (Noul has no confidence, so use max(p, 1 - p)).
     pub fn certainty(&self) -> f32 {
         match self {
             Answer::Choice { confidence, .. } | Answer::Score { confidence, .. } => *confidence,
@@ -77,7 +76,7 @@ impl Answer {
         }
     }
 
-    /// `--explain` 用: 上位 2 候補。
+    /// For `--explain`: the top two choices.
     pub fn top2(&self) -> String {
         match self {
             Answer::Choice { probabilities, .. } => {
@@ -120,7 +119,7 @@ pub struct Usage {
     pub cost: Option<f64>,
 }
 
-/// 実機(client) とテストのモックを差し替えるための境界。
+/// The seam for swapping the real client and the test mock.
 pub trait Oracle {
     fn decide(&self, state: Value, questions: Questions) -> Result<DecisionsResponse, crate::error::JanyError>;
 }

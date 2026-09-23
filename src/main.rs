@@ -63,9 +63,9 @@ struct Opts {
     explain: bool,
     no_jev: bool,
     hint: bool,
-    /// --init / --register のスキルと雛形の言語。
+    /// Language of the skill and scaffold for --init / --register.
     locale: Option<skill::Locale>,
-    /// jany 自身の操作(--init / --register / --test / --setup / --list)。<command> は常にツール名なのでフラグにしてある。
+    /// jany's own action (--init / --register / --test / --setup / --list). It is a flag so that <command> is always the tool's name.
     action: Option<String>,
 }
 
@@ -115,11 +115,11 @@ fn run(args: Vec<String>) -> Result<i32, JanyError> {
                 opts.action = Some(a.clone());
             }
             "-h" | "--help" => {
-                print!("{HELP}");
+                output::stdout(HELP);
                 return Ok(0);
             }
             "-V" | "--version" => {
-                println!("jany {}", env!("CARGO_PKG_VERSION"));
+                output::stdout(&format!("jany {}\n", env!("CARGO_PKG_VERSION")));
                 return Ok(0);
             }
             _ => words.push(a),
@@ -129,7 +129,7 @@ fn run(args: Vec<String>) -> Result<i32, JanyError> {
         opts.no_jev = true;
     }
     if words.is_empty() && opts.action.is_none() {
-        print!("{HELP}");
+        output::stdout(HELP);
         return Ok(0);
     }
     if opts.locale.is_some() && !matches!(opts.action.as_deref(), Some("--init" | "--register")) {
@@ -142,8 +142,8 @@ fn run(args: Vec<String>) -> Result<i32, JanyError> {
         "--setup" => return setup::run(),
         "--init" => {
             let shell = words.first().map(String::as_str).unwrap_or("");
-            print!("{}", init::script(shell)?);
-            // スキルも一緒に置く。失敗してもラッパーは出ているので警告だけ。
+            output::stdout(init::script(shell)?);
+            // Install the skill too. The wrapper is already printed, so a failure is only a warning.
             match skill::install(locale) {
                 Ok(changed) => {
                     for c in changed {
@@ -152,7 +152,7 @@ fn run(args: Vec<String>) -> Result<i32, JanyError> {
                 }
                 Err(e) => eprintln!("jany: could not install the jany-register skill: {e}"),
             }
-            // 組み込みの定義(find / curl / docker run)。無いものだけ置く。
+            // Built-in definitions (find / curl / docker run). Only the missing ones are placed.
             match skill::install_commands(&cmd_dir) {
                 Ok(placed) => {
                     for d in placed {
@@ -176,8 +176,8 @@ fn run(args: Vec<String>) -> Result<i32, JanyError> {
             for name in list(&cmd_dir) {
                 let ex = schema::Schema::load(&cmd_dir.join(name.replace(' ', "/"))).ok().and_then(|s| s.command.example);
                 match ex {
-                    Some(ex) => println!("{name}  {}", paint(on, C::Dim, &format!("e.g. jany {name} {ex}"))),
-                    None => println!("{name}"),
+                    Some(ex) => output::stdout(&format!("{name}  {}\n", paint(on, C::Dim, &format!("e.g. jany {name} {ex}")))),
+                    None => output::stdout(&format!("{name}\n")),
                 }
             }
             return Ok(0);
@@ -189,13 +189,13 @@ fn run(args: Vec<String>) -> Result<i32, JanyError> {
         && let Err(JanyError::NoCommand(..)) = schema::resolve(&cmd_dir, &words)
         && let Some(subs) = hint::subcommands(&cmd_dir, &words)
     {
-        // `jany docker --hint`: docker 自体に定義は無いので、下にある定義を案内する。
+        // `jany docker --hint`: docker itself has no definition, so point at the ones under it.
         eprint!("{subs}");
         return Ok(0);
     }
     let (schema, used) = schema::resolve(&cmd_dir, &words)?;
     if opts.hint {
-        // stdout は空のまま(ラッパーが入力行に何も載せない)。
+        // stdout stays empty (so the wrapper puts nothing on the input line).
         return Ok(hint::run(&schema));
     }
     let cfg = config::load()?;
@@ -211,7 +211,7 @@ fn run(args: Vec<String>) -> Result<i32, JanyError> {
     let r = match interpret::run(&schema, &cfg, &words[used..], &passthrough, oracle_ref, None) {
         Ok(r) => r,
         Err(JanyError::Unresolved(s)) => {
-            // どの語が決まらなかったかは表で見せる。interpret と同じく alias を展開してから。
+            // Show which words stayed unresolved in a table, expanding aliases first as interpret does.
             let aliases = cfg.cmd.get(&schema.command.name).map(|c| c.aliases.clone()).unwrap_or_default();
             let tokens = rules::classify(&schema, &config::expand_aliases(&aliases, &words[used..]));
             output::explain(&tokens, None);
@@ -255,11 +255,11 @@ fn run(args: Vec<String>) -> Result<i32, JanyError> {
         _ => {}
     }
 
-    println!("{}", output::render(argv, r.out.pipe.as_deref()));
+    output::stdout(&format!("{}\n", output::render(argv, r.out.pipe.as_deref())));
     Ok(0)
 }
 
-/// preview argv(read-only と schema が言っているもの)を回して先頭 N 行を stderr に見せる。
+/// Runs the preview argv (which the schema declares read-only) and shows its first N lines on stderr.
 fn preview(argv: &[String], lines: usize, on: bool) -> Result<(), JanyError> {
     if argv.is_empty() {
         return Ok(());

@@ -1,5 +1,5 @@
-//! 規則エンジン。schema の [[rules]] を上から順に試し、最初に当たったものが勝つ。
-//! 決められない語は role = None のまま jev へ。
+//! The rule engine. Tries the schema's [[rules]] top to bottom; the first match wins.
+//! Words it cannot decide go to jev with role = None.
 
 use crate::amount;
 use crate::schema::{Rule, Schema};
@@ -31,7 +31,7 @@ pub fn classify(schema: &Schema, words: &[String]) -> Vec<Token> {
                 } else if let Some(table) = schema.role(&next.role).and_then(|r| r.table.as_deref())
                     && let Some(fixed) = schema.table_lookup(table, nw)
                 {
-                    // 役割に表があれば補正値を引く(restart always → always、arm64 → linux/arm64)。
+                    // If the role has a table, look up the corrected value (restart always → always, arm64 → linux/arm64).
                     n.fixed = fixed;
                 }
                 next_tok = Some(n);
@@ -48,12 +48,12 @@ pub fn classify(schema: &Schema, words: &[String]) -> Vec<Token> {
     out
 }
 
-/// 当たったときの付随情報。
+/// What comes with a match.
 pub struct Hit {
-    /// 表のキー(fixed になる)。"_" の表は None。
+    /// The table key (becomes fixed). None for the "_" key.
     pub fixed: Option<String>,
     pub amount: Option<Amount>,
-    /// unit_word のとき、その単位キー。
+    /// For unit_word, its unit key.
     pub unit: Option<String>,
     pub captures: Vec<String>,
 }
@@ -148,7 +148,7 @@ fn when_ok(schema: &Schema, rule: &Rule, out: &[Token], words: &[String], i: usi
 }
 
 fn apply(schema: &Schema, rule: &Rule, t: &mut Token, hit: &Hit) {
-    // amount は規則の指定が優先、無ければ builtin が読んだもの。
+    // The rule's own amount wins; otherwise the one the builtin read.
     if let Some(ra) = &rule.amount {
         let unit = match ra.unit.as_deref() {
             Some("$unit") => hit.unit.clone(),
@@ -157,7 +157,7 @@ fn apply(schema: &Schema, rule: &Rule, t: &mut Token, hit: &Hit) {
         };
         t.amount = Some(Amount { n: ra.n, unit, at_least: ra.at_least });
     } else if let Some(a) = &hit.amount {
-        // 量を持つ役割(と未解決 / by_dimension)にだけ付ける。`-perm 644` の 644 は passthrough なので付けない。
+        // Only for roles with an amount (and unresolved / by_dimension). The 644 in `-perm 644` is passthrough, so it gets none.
         let keeps_amount = matches!(rule.role.as_str(), "unresolved" | "by_dimension") || schema.role(&rule.role).is_some_and(|r| r.amount.is_some());
         if keeps_amount {
             t.amount = Some(a.clone());
@@ -165,9 +165,9 @@ fn apply(schema: &Schema, rule: &Rule, t: &mut Token, hit: &Hit) {
     }
 
     let role: Option<String> = match rule.role.as_str() {
-        // 役割は付けず amount だけ持たせて jev へ。
+        // No role, only the amount, and on to jev.
         "unresolved" => None,
-        // 単位の次元で time_amount / size_amount を選ぶ。
+        // Choose time_amount / size_amount from the unit's dimension.
         "by_dimension" => {
             let unit = t.amount.as_ref().and_then(|a| a.unit.clone()).or_else(|| hit.unit.clone());
             unit.and_then(|u| schema.unit_dimension(&u)).and_then(|d| schema.role_for_dimension(&d).map(str::to_string))
@@ -184,7 +184,7 @@ fn apply(schema: &Schema, rule: &Rule, t: &mut Token, hit: &Hit) {
     } else if let Some(u) = &hit.unit
         && rule.role != "by_dimension"
     {
-        // 単位語そのものが役割(unit)のとき、fixed は単位キー。
+        // When the unit word itself is the role (unit), fixed is the unit key.
         t.fixed = Some(u.clone());
     }
     if let Some(n) = &rule.note {
@@ -195,7 +195,7 @@ fn apply(schema: &Schema, rule: &Rule, t: &mut Token, hit: &Hit) {
     }
 }
 
-/// `fixed` のテンプレート: "$upper" / "$lower" / "$1" / それ以外はそのまま。
+/// Templates for `fixed`: "$upper" / "$lower" / "$1" / anything else is literal.
 pub fn template(spec: &str, text: &str, captures: Option<&Vec<String>>) -> String {
     match spec {
         "$upper" => text.to_uppercase(),
@@ -208,7 +208,7 @@ pub fn template(spec: &str, text: &str, captures: Option<&Vec<String>>) -> Strin
     }
 }
 
-/// 見た目でパスと分かるもの。`src` のような裸の名前は existing_dir で見る。
+/// Words that look like a path. Bare names like `src` are checked by existing_dir.
 pub fn is_path_like(w: &str) -> bool {
     w == "." || w == ".." || w == "~" || w.starts_with('/') || w.starts_with("./") || w.starts_with("../") || w.starts_with("~/")
 }

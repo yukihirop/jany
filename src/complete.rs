@@ -1,11 +1,11 @@
-//! `jany --complete -- <typed words…>`: 補完候補を `候補<TAB>説明` で 1 行ずつ出す。
-//! シェル側(`jany --init` が出す関数)は結果を並べるだけで、何が候補かは知らない。
+//! `jany --complete -- <typed words…>`: print completion candidates, one `candidate<TAB>description` per line.
+//! The shell side (the functions `jany --init` prints) only lists the result; it does not know what the candidates are.
 
 use crate::schema::{OneOrMany, Schema};
 use std::collections::BTreeSet;
 use std::path::Path;
 
-/// jany 自身の操作。<command> と混ざらないようフラグにしてある。
+/// jany's own actions. They are flags so they never clash with <command>.
 const ACTIONS: &[(&str, &str)] = &[
     (
         "--init",
@@ -35,7 +35,7 @@ pub fn run(cmd_dir: &Path, typed: &[String]) -> i32 {
         .filter(|w| !w.starts_with('-'))
         .cloned()
         .collect();
-    // 打ちかけがフラグ(`find --h`)なら、それが prefix なので上書きしない。
+    // If the partial word is a flag (`find --h`), it is the prefix; do not override it.
     if !typed_words.is_empty()
         && !prefix.starts_with('-')
         && crate::schema::resolve(cmd_dir, &typed_words)
@@ -47,7 +47,7 @@ pub fn run(cmd_dir: &Path, typed: &[String]) -> i32 {
     }
     let words: Vec<&String> = context.iter().filter(|w| !w.starts_with('-')).collect();
 
-    // 直前が --test / --register / --init なら、その引数を出して終わり。
+    // After --test / --register / --init, offer that action's arguments and stop.
     match context
         .iter()
         .rev()
@@ -55,7 +55,7 @@ pub fn run(cmd_dir: &Path, typed: &[String]) -> i32 {
         .map(String::as_str)
     {
         Some("--locale") => {
-            // `--locale en` の後にはもう出さない。
+            // Nothing more after `--locale en`.
             if context.last().map(String::as_str) != Some("--locale") {
                 return print(out);
             }
@@ -67,7 +67,7 @@ pub fn run(cmd_dir: &Path, typed: &[String]) -> i32 {
             return print(out);
         }
         Some("--init") => {
-            // シェルを打った後は --locale だけ。
+            // Once the shell is typed, only --locale is left.
             let shell_given = context.last().is_some_and(|w| !w.starts_with('-'));
             let cands: &[(&str, &str)] = if shell_given {
                 &[("--locale", "language of the /jany-register skill (en, ja)")]
@@ -82,8 +82,8 @@ pub fn run(cmd_dir: &Path, typed: &[String]) -> i32 {
             return print(out);
         }
         Some(flag @ ("--test" | "--register")) => {
-            // `docker run` を 1 候補で返すとシェルが `docker\ run`(1 引数)で挿入するので、
-            // 階層は 1 段ずつ出す: 既に打った名前のディレクトリの子だけ。
+            // Returning `docker run` as one candidate makes the shell insert `docker\ run` (one argument),
+            // so offer one level at a time: only the children of the directory named so far.
             let after = context.iter().skip_while(|w| w.as_str() != flag).skip(1).filter(|w| !w.starts_with('-'));
             let dir = after.fold(cmd_dir.to_path_buf(), |d, w| d.join(w.as_str()));
             for (name, description) in root_commands(&dir) {
@@ -96,7 +96,7 @@ pub fn run(cmd_dir: &Path, typed: &[String]) -> i32 {
         _ => {}
     }
 
-    // まだコマンド名が決まっていない: 定義名とアクション。
+    // No command name yet: definition names and actions.
     let resolved = crate::schema::resolve(
         cmd_dir,
         &context
@@ -159,7 +159,7 @@ pub fn run(cmd_dir: &Path, typed: &[String]) -> i32 {
         return print(out);
     };
 
-    // サブコマンド(cmd/docker/run のような階層)。
+    // Subcommands (hierarchies like cmd/docker/run).
     let dir = words[..used]
         .iter()
         .fold(cmd_dir.to_path_buf(), |d, w| d.join(w.as_str()));
@@ -177,7 +177,7 @@ pub fn run(cmd_dir: &Path, typed: &[String]) -> i32 {
         }
     }
 
-    // そのコマンドが知っている語。規則の word と表の語。
+    // Words the command knows: rule words and table words.
     let already: BTreeSet<&str> = words.iter().map(|w| w.as_str()).collect();
     let mut vocab: BTreeSet<String> = BTreeSet::new();
     for r in &schema.rules {
@@ -197,15 +197,6 @@ pub fn run(cmd_dir: &Path, typed: &[String]) -> i32 {
     for (_, syns) in schema.tables.keys().flat_map(|t| schema.table_entries(t)) {
         vocab.extend(syns);
     }
-    for (name, _) in &schema
-        .command
-        .name
-        .char_indices()
-        .take(0)
-        .collect::<Vec<_>>()
-    {
-        let _ = name; // (no-op: name は候補にしない)
-    }
     for w in vocab {
         if w.len() >= 2 && !already.contains(w.as_str()) && w.starts_with(prefix) {
             out.push((w, String::new()));
@@ -224,7 +215,7 @@ pub fn run(cmd_dir: &Path, typed: &[String]) -> i32 {
     print(out)
 }
 
-/// 定義のある名前("docker run" のように空白区切り)。
+/// Names that have a definition (space-separated, like "docker run").
 fn commands(cmd_dir: &Path) -> Vec<String> {
     let mut out = Vec::new();
     fn walk(dir: &Path, prefix: &str, out: &mut Vec<String>) {
@@ -280,10 +271,12 @@ fn root_commands(cmd_dir: &Path) -> Vec<(String, String)> {
 
 fn print(out: Vec<(String, String)>) -> i32 {
     let mut seen = BTreeSet::new();
+    let mut text = String::new();
     for (c, d) in out {
         if seen.insert(c.clone()) {
-            println!("{c}\t{d}");
+            text.push_str(&format!("{c}\t{d}\n"));
         }
     }
+    crate::output::stdout(&text);
     0
 }

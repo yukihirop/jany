@@ -1,11 +1,11 @@
-//! `jany <command> --hint`: そのコマンドに何を言えるか(役割の一覧)と例(cases.toml)を stderr に出す。
-//! 例は cases.toml の words をそのまま使うので、テストで通る言い方だけが出る。
+//! `jany <command> --hint`: prints what you can say to that command (its roles) and examples (cases.toml) on stderr.
+//! The examples are cases.toml's words as-is, so only phrasings that pass the tests are shown.
 
 use crate::color::{self, C, paint};
 use crate::output;
 use crate::schema::Schema;
 
-/// 出す例の数。残りは件数だけ言う。
+/// How many examples to show. For the rest, only the count is given.
 const MAX_EXAMPLES: usize = 8;
 
 pub fn run(schema: &Schema) -> i32 {
@@ -43,7 +43,7 @@ pub fn text(schema: &Schema, on: bool) -> String {
     s
 }
 
-/// `jany docker --hint` のように定義の無い途中の名前なら、その下の定義名と例の 1 行。途中の名前でなければ None。
+/// For an intermediate name without a definition (`jany docker --hint`), the definitions under it with one example each. None if it is not such a name.
 pub fn subcommands(cmd_dir: &std::path::Path, words: &[String]) -> Option<String> {
     if words.is_empty() || words.iter().any(|w| w.is_empty() || w.contains('/') || w.starts_with('.')) {
         return None;
@@ -66,8 +66,8 @@ pub fn subcommands(cmd_dir: &std::path::Path, words: &[String]) -> Option<String
     Some(s)
 }
 
-/// (打つ語, 出てくるコマンド)。エラーを期待する例、ディレクトリを用意する例、defaults を差し替える例は
-/// 手元で同じにならないので出さない。cases.toml が無い・読めないなら例は無し。
+/// (words to type, resulting command). Cases that expect an error, set up directories, or override defaults
+/// would not come out the same on your machine, so they are left out. No examples if cases.toml is missing or unreadable.
 fn examples(schema: &Schema) -> Vec<(String, Option<String>)> {
     let Ok(text) = std::fs::read_to_string(schema.dir.join("cases.toml")) else { return Vec::new() };
     let Ok(t) = toml::from_str::<toml::Table>(&text) else { return Vec::new() };
