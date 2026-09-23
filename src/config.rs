@@ -6,6 +6,9 @@
 //! model = "typesafe/jev-1.13"
 //! reject_below = 0.5       # interpretations below this are not printed to stdout
 //!
+//! [suggest]
+//! enabled = false          # no dim hint in zsh (JANY_SUGGEST=0/1 overrides it per shell)
+//!
 //! [cmd.curl.defaults]      # overrides the schema's [defaults]
 //! content_type = "text/plain"
 //! ```
@@ -19,6 +22,7 @@ use std::path::PathBuf;
 #[serde(default)]
 pub struct Config {
     pub jev: Jev,
+    pub suggest: Suggest,
     /// Command name → settings.
     pub cmd: BTreeMap<String, CmdConfig>,
 }
@@ -33,6 +37,13 @@ pub struct Jev {
     pub timeout_ms: u64,
 }
 
+/// The dim hint after `jany <command> ` in zsh (`jany --suggest`).
+#[derive(Debug, Clone, Deserialize)]
+#[serde(default)]
+pub struct Suggest {
+    pub enabled: bool,
+}
+
 #[derive(Debug, Clone, Default, Deserialize)]
 #[serde(default)]
 pub struct CmdConfig {
@@ -43,6 +54,12 @@ pub struct CmdConfig {
 impl Default for Jev {
     fn default() -> Self {
         Jev { enabled: true, api_key: None, model: crate::jev::client::DEFAULT_MODEL.into(), reject_below: 0.5, timeout_ms: 5000 }
+    }
+}
+
+impl Default for Suggest {
+    fn default() -> Self {
+        Suggest { enabled: true }
     }
 }
 
@@ -76,6 +93,9 @@ pub fn load() -> Result<Config, JanyError> {
     };
     if let Ok(m) = std::env::var("JEV_MODEL") {
         cfg.jev.model = m;
+    }
+    if let Ok(v) = std::env::var("JANY_SUGGEST") {
+        cfg.suggest.enabled = v != "0";
     }
     if cfg.jev.api_key.is_none() {
         cfg.jev.api_key = borrowed_api_key();

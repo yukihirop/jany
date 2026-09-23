@@ -20,11 +20,15 @@ fn line(cmd_dir: &Path, typed: &[String]) -> Option<String> {
     }
     // jany's own flags (--explain, --no-jev) are not words of the command.
     let words: Vec<String> = typed.iter().filter(|w| !w.starts_with("--")).cloned().collect();
+    let cfg = config::load().ok();
+    if cfg.as_ref().is_some_and(|c| !c.suggest.enabled) {
+        return None;
+    }
     let (schema, used) = schema::resolve(cmd_dir, &words).ok()?;
     if schema.placeholders.is_empty() {
         return None;
     }
-    let aliases = config::load().ok().and_then(|c| c.cmd.get(&schema.command.name).map(|c| c.aliases.clone())).unwrap_or_default();
+    let aliases = cfg.and_then(|c| c.cmd.get(&schema.command.name).map(|c| c.aliases.clone())).unwrap_or_default();
     let rest = config::expand_aliases(&aliases, &words[used..]);
     let mut tokens = rules::classify(&schema, &rest);
     repair::repair(&schema, &mut tokens, &Answers::new());

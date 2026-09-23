@@ -63,6 +63,7 @@ env:
   JANY_SKILL_DIR         where `jany --init` puts the skill (default ~/.agents/skills/jany-register;
                          /jany-update goes next to it)
   JANY_NO_JEV=1          same as --no-jev
+  JANY_SUGGEST=0|1       turn the dim hint in zsh off/on (overrides [suggest] enabled in config.toml)
 ";
 
 #[derive(Default)]
