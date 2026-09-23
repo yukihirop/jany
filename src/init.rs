@@ -37,6 +37,43 @@ _jany_complete() {
   _describe 'jany' __jany_candidates
 }
 compdef _jany_complete jany
+
+# dim hint after `jany <command> ` of what is still to say (the definition's [[placeholders]]).
+# Only lines starting with `jany ` (or an alias of it, like `j `) are touched. JANY_SUGGEST=0 turns it off.
+typeset -g _jany_suggest_buf="" _jany_suggest_text="" _jany_suggest_hl=""
+_jany_suggest() {
+  local __jany_s="" __jany_w1
+  if [[ ${JANY_SUGGEST:-1} != 0 && $BUFFER == *" " && $CURSOR -eq ${#BUFFER} ]]; then
+    __jany_w1=${${(z)BUFFER}[1]}
+    if [[ $__jany_w1 == jany || ${aliases[$__jany_w1]} == jany ]]; then
+      # redraws come often; ask jany only when the line changed
+      if [[ $BUFFER != "$_jany_suggest_buf" ]]; then
+        _jany_suggest_buf=$BUFFER
+        _jany_suggest_text="$(command jany --suggest -- "${(@Q)${(z)BUFFER}[2,-1]}" 2>/dev/null)"
+      fi
+      __jany_s=$_jany_suggest_text
+    fi
+  fi
+  _jany_suggest_show "$__jany_s"
+}
+_jany_suggest_show() {
+  if [[ -n $_jany_suggest_hl ]]; then
+    region_highlight=("${(@)region_highlight:#${(b)_jany_suggest_hl}}")
+    POSTDISPLAY=""
+    _jany_suggest_hl=""
+  fi
+  if [[ -n $1 ]]; then
+    POSTDISPLAY=$1
+    _jany_suggest_hl="${#BUFFER} $(( ${#BUFFER} + ${#POSTDISPLAY} )) fg=8"
+    region_highlight+=("$_jany_suggest_hl")
+  fi
+}
+# on Enter, redraw once without the hint so it does not stay on screen above the output
+_jany_suggest_clear() { [[ -n $_jany_suggest_hl ]] && { _jany_suggest_show ""; zle -R; }; }
+if [[ -o interactive ]] && autoload -Uz add-zle-hook-widget 2>/dev/null; then
+  add-zle-hook-widget line-pre-redraw _jany_suggest
+  add-zle-hook-widget line-finish _jany_suggest_clear
+fi
 "#;
 
 /// bash cannot touch the input line from a child process, so bind the command to the key sequence `\e[0n`

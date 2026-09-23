@@ -15,6 +15,7 @@ mod rules;
 mod schema;
 mod setup;
 mod skill;
+mod suggest;
 mod testrun;
 mod token;
 
@@ -36,6 +37,7 @@ usage: jany <command> [words ...] [flags] [-- passthrough args]
        jany --setup                  save your OpenRouter API key
        jany --list                   show the command definitions found
        jany --complete -- [words]    print shell completion candidates
+       jany --suggest -- [words]     print the dim hint for the words still to say (zsh)
 
 jany's own actions are flags so that <command> is always the tool's name.
 
@@ -87,6 +89,11 @@ fn run(args: Vec<String>) -> Result<i32, JanyError> {
         let typed = args.iter().position(|a| a == "--").map(|i| &args[i + 1..]).unwrap_or(&[]);
         let cmd_dir = config::cmd_dir().ok_or_else(|| JanyError::Config("cannot determine command dir (HOME unset)".into()))?;
         return Ok(complete::run(&cmd_dir, typed));
+    }
+    if args.first().map(String::as_str) == Some("--suggest") {
+        let typed = args.iter().position(|a| a == "--").map(|i| &args[i + 1..]).unwrap_or(&[]);
+        let cmd_dir = config::cmd_dir().ok_or_else(|| JanyError::Config("cannot determine command dir (HOME unset)".into()))?;
+        return Ok(suggest::run(&cmd_dir, typed));
     }
     let mut opts = Opts::default();
     let mut words = Vec::new();

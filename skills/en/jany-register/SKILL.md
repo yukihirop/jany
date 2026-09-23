@@ -40,6 +40,7 @@ Think about it in this order:
 5. **questions**: what to ask jev about words the rules could not decide. `role.i` is automatic. Typo correction, units, direction, joining (`join`), and so on
 6. **repair**: adjacency (attach a unit to its number, let a marker take its neighbour, alternate key/value)
 7. **confirm / defaults**: `preview_readonly` if destructive, `unsafe_note` if hard to undo
+8. **placeholders**: the dim hint zsh shows after `jany <name> `. 3–6 slots in the order people say them (`<in.mov> <mp4|gif> <from 0:10 to 0:40>`), with `bare = true` on the slot bare words usually fill
 
 ### 4. Write assemble.sh
 

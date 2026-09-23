@@ -40,6 +40,7 @@ jany は「崩れた語の並び → 1 本のコマンド行」を、コマン�
 5. **questions**: 規則で決まらない語に jev へ聞くこと。`role.i` は自動。typo 補正、単位、向き、結合(`join`)など
 6. **repair**: 隣接関係(単位を数に付ける、marker が隣を取る、key/value の交互配置)
 7. **confirm / defaults**: 破壊的なら `preview_readonly`、取り消しにくいなら `unsafe_note`
+8. **placeholders**: zsh で `jany <name> ` の後ろに薄く出す候補。人が言う順に 3〜6 枠(`<in.mov> <mp4|gif> <from 0:10 to 0:40>`)。裸の語がふつう入る枠に `bare = true`
 
 ### 4. assemble.sh を書く
 

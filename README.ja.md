@@ -83,6 +83,8 @@ printf '%s\n' "alias j='jany'" 'compdef _jany_complete j' >> ~/.zshrc
 
 `jany --init` は 3 つのことをする: ラッパー関数を出力する、組み込みの定義(`find`、`curl`、`docker run`)を `~/.config/jany/cmd/` に置く、`/jany-register` スキルを `~/.agents/skills/` に置く(`~/.claude/skills/` と `~/.codex/skills/` があればそこからリンクする)。あなたが編集した定義は上書きしない。スキルは既定で英語版。日本語版は `--locale ja` で置く。`--init` はシェルを開くたびにスキルを書き直すので、フラグは rc の行に書いておく(上の例のように)。
 
+zsh では、`jany <command> ` の後ろに、まだ言えることを薄く出す(定義の `[[placeholders]]`)。例: `jany find src ` → `<file|dir> <*.log> <older than N days> <delete|count>`。jev は呼ばない。`JANY_SUGGEST=0` で消える。bash と fish には無い。
+
 環境変数の `OPENROUTER_API_KEY` が優先される。`jind setup` や `jurl setup` で保存したキーも拾う。macOS の zsh で確認している。
 
 ## 使い方

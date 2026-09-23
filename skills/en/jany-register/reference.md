@@ -233,6 +233,25 @@ value_role = "value"
 key_role_if = { role = "query", any = [{ member_role = "query" }, { value_of = "method", is = "GET" }, { answer = "get_intent", gt = 0.5 }, { no_role = "method" }] }
 ```
 
+### [[placeholders]]
+
+The dim hint zsh shows after `jany <name> ` (e.g. `<path> <file|dir> <older than N days>`), so people know what they can say next. Slots are shown in the order written, and a slot disappears once a typed word takes one of its `roles`. Only rules and repair run for it (never jev), on every keystroke. Optional: without it, nothing is shown.
+
+```toml
+[[placeholders]]
+text  = "<path>"
+roles = ["path"]
+
+[[placeholders]]
+text  = "<*.log>"
+roles = ["name_pattern", "extension", "name_word"]   # alternatives share one slot
+bare  = true          # a word the rules could not decide (jev will) counts as this slot
+```
+
+- Write 3–6 slots for what people say most, in the order they usually say it. Not one per role
+- Put `bare = true` on the slot that bare words usually are (find's name, docker's image, ffmpeg's input file). Otherwise `nginx` in `jany docker run nginx ` leaves `<image>` showing
+- A number the rules could not decide counts as the first open slot with an `amount` role (of the same dimension when its unit is known), so `7` in `older than 7 days` fills `<older than N days>`
+
 ### [assemble] / [defaults] / [confirm]
 
 ```toml

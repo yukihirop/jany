@@ -83,6 +83,8 @@ printf '%s\n' "alias j='jany'" 'compdef _jany_complete j' >> ~/.zshrc
 
 `jany --init` does three things: prints the wrapper function, installs the built-in definitions (`find`, `curl`, `docker run`) into `~/.config/jany/cmd/`, and installs the `/jany-register` skill into `~/.agents/skills/` (linked from `~/.claude/skills/` and `~/.codex/skills/` when those exist). It never overwrites a definition you have edited. The skill is in English by default; `jany --init zsh --locale ja` installs the Japanese one (put the flag in your rc line, since `--init` rewrites the skill on every shell start).
 
+In zsh the wrapper also shows a dim hint of what you can still say after `jany <command> ` (the definition's `[[placeholders]]`), e.g. `jany find src ` → `<file|dir> <*.log> <older than N days> <delete|count>`. It never calls jev. `JANY_SUGGEST=0` turns it off. bash and fish don't have it.
+
 `OPENROUTER_API_KEY` in the environment takes precedence; a key saved by `jind setup` or `jurl setup` is picked up too. Tested on macOS with zsh.
 
 ## Usage

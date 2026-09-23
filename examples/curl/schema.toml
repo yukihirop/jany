@@ -324,6 +324,26 @@ key_role_if = { role = "query", any = [{ member_role = "query" }, { value_of = "
 # ---------------------------------------------------------------------------
 # 実行
 # ---------------------------------------------------------------------------
+# ---------------------------------------------------------------------------
+# 薄い候補 (zsh)。`jany curl ` の後ろに、まだどの語も埋めていない枠を書いた順に出す。規則で決まらない数は量の役割の枠を埋める
+# ---------------------------------------------------------------------------
+[[placeholders]]
+text  = "<GET|POST>"
+roles = ["method"]
+
+[[placeholders]]
+text  = "<url>"
+roles = ["url"]
+bare  = true   # 規則で決まらない語 (jev に回る語) はこの枠を埋めたとみなす
+
+[[placeholders]]
+text  = "<key=value>"
+roles = ["field", "field_key", "field_value", "query", "body_file"]
+
+[[placeholders]]
+text  = "<json|form>"
+roles = ["content_type"]
+
 [assemble]
 script = "assemble.sh"
 # stdin: {tokens, passthrough, answers, defaults} / stdout: {argv, preview, risk, pipe, error}

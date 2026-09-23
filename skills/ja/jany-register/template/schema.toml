@@ -48,6 +48,12 @@ note  = "raw flag"
 # role = "exclude"
 # from = ["path", "unresolved"]
 
+# zsh で `jany __NAME__ ` の後ろに薄く出す候補。人が言う順に書く。どれかの役割を語が取ると消える。
+# [[placeholders]]
+# text  = "<path>"
+# roles = ["path"]
+# bare  = true
+
 [assemble]
 script = "assemble.sh"
 

@@ -233,6 +233,25 @@ value_role = "value"
 key_role_if = { role = "query", any = [{ member_role = "query" }, { value_of = "method", is = "GET" }, { answer = "get_intent", gt = 0.5 }, { no_role = "method" }] }
 ```
 
+### [[placeholders]]
+
+zsh で `jany <name> ` の後ろに薄く出す候補(例: `<path> <file|dir> <older than N days>`)。次に何を言えるかを見せて、迷わないようにする。枠は書いた順に出て、打った語がどれかの `roles` を取ると消える。キーを打つたびに規則と repair だけを回す(jev は呼ばない)。任意。無ければ何も出ない。
+
+```toml
+[[placeholders]]
+text  = "<path>"
+roles = ["path"]
+
+[[placeholders]]
+text  = "<*.log>"
+roles = ["name_pattern", "extension", "name_word"]   # 択一の役割は 1 つの枠にまとめる
+bare  = true          # 規則で決まらない語 (jev に回る語) はこの枠を埋めたとみなす
+```
+
+- 枠はよく言うものを 3〜6 個、人が言う順に書く。役割ごとに 1 つ作らない
+- 裸の語がふつう入る枠(find の名前、docker の image、ffmpeg の入力ファイル)に `bare = true` を付ける。付けないと `jany docker run nginx ` で `<image>` が出たままになる
+- 規則で決まらない数は、`amount` を持つ役割の最初の空き枠を埋めたとみなす(単位が分かれば同じ次元の枠)。`older than 7 days` の `7` は `<older than N days>` を埋める
+
 ### [assemble] / [defaults] / [confirm]
 
 ```toml
