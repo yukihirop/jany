@@ -54,13 +54,21 @@ pub fn run(cmd_dir: &Path, typed: &[String]) -> i32 {
     {
         Some("--init") => {
             for s in ["zsh", "bash", "fish"] {
-                out.push((s.into(), "shell wrapper".into()));
+                if s.starts_with(prefix) {
+                    out.push((s.into(), "shell wrapper".into()));
+                }
             }
             return print(out);
         }
-        Some("--test") | Some("--register") => {
-            for name in commands(cmd_dir) {
-                out.push((name, String::new()));
+        Some(flag @ ("--test" | "--register")) => {
+            // `docker run` を 1 候補で返すとシェルが `docker\ run`(1 引数)で挿入するので、
+            // 階層は 1 段ずつ出す: 既に打った名前のディレクトリの子だけ。
+            let after = context.iter().skip_while(|w| w.as_str() != flag).skip(1).filter(|w| !w.starts_with('-'));
+            let dir = after.fold(cmd_dir.to_path_buf(), |d, w| d.join(w.as_str()));
+            for (name, description) in root_commands(&dir) {
+                if name.starts_with(prefix) {
+                    out.push((name, description));
+                }
             }
             return print(out);
         }

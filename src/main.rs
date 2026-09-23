@@ -180,8 +180,9 @@ fn run(args: Vec<String>) -> Result<i32, JanyError> {
     let r = match interpret::run(&schema, &cfg, &words[used..], &passthrough, oracle_ref, None) {
         Ok(r) => r,
         Err(JanyError::Unresolved(s)) => {
-            // どの語が決まらなかったかは表で見せる。
-            let tokens = rules::classify(&schema, &words[used..]);
+            // どの語が決まらなかったかは表で見せる。interpret と同じく alias を展開してから。
+            let aliases = cfg.cmd.get(&schema.command.name).map(|c| c.aliases.clone()).unwrap_or_default();
+            let tokens = rules::classify(&schema, &config::expand_aliases(&aliases, &words[used..]));
             output::explain(&tokens, None);
             return Err(JanyError::Unresolved(s));
         }

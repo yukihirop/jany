@@ -71,7 +71,7 @@ impl JevInfo {
     }
 }
 
-/// `jany setup` の上書き確認だけに使う y/N。
+/// `jany --setup` の上書き確認だけに使う y/N。
 pub fn confirm_no(prompt: &str) -> bool {
     if !std::io::stdin().is_terminal() {
         return false;

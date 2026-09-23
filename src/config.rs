@@ -2,7 +2,7 @@
 //!
 //! ```toml
 //! [jev]
-//! api_key = "..."          # `jany setup` が書く
+//! api_key = "..."          # `jany --setup` が書く
 //! model = "typesafe/jev-1.13"
 //! reject_below = 0.5       # これ未満の解釈は stdout に出さない
 //!
