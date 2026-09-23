@@ -36,27 +36,60 @@ jany() {
   return $__jany_status
 }
 
+# The words after `jany` on a line (in reply), with aliases on the first word expanded:
+# `j` → jany, `jpnpm='j pnpm'` → jany pnpm. Returns 1 when the line does not start with jany.
+_jany_words() {
+  local -a __jany_w
+  local __jany_n=0
+  __jany_w=("${(@Q)${(z)1}}")
+  while (( __jany_n++ < 5 )); do
+    if [[ ${__jany_w[1]} == jany ]]; then
+      reply=("${(@)__jany_w[2,-1]}")
+      return 0
+    fi
+    [[ -n ${__jany_w[1]} && -n ${aliases[${__jany_w[1]}]} ]] || return 1
+    __jany_w=("${(@Q)${(z)aliases[${__jany_w[1]}]}}" "${(@)__jany_w[2,-1]}")
+  done
+  return 1
+}
+
 _jany_complete() {
-  local -a __jany_words __jany_candidates
-  __jany_words=("${words[@]:1}")
+  local -a __jany_words __jany_candidates reply
+  # expand only the command word, so the (possibly empty) word being completed is kept
+  _jany_words "${words[1]}" || return 1
+  __jany_words=("${reply[@]}" "${(@)words[2,-1]}")
   __jany_candidates=("${(@f)$(command jany --complete -- "${__jany_words[@]}" | cut -f1)}")
   _describe 'jany' __jany_candidates
 }
-compdef _jany_complete jany
+(( $+functions[compdef] )) && compdef _jany_complete jany
+# aliases of jany (`j`, `jpnpm='j pnpm'`) are defined after this file in most rcs, so give them
+# the same completion at the first prompt
+_jany_compdef_aliases() {
+  local __jany_a
+  local -a reply
+  add-zsh-hook -d precmd _jany_compdef_aliases
+  (( $+functions[compdef] )) || return 0
+  for __jany_a in ${(k)aliases}; do
+    _jany_words "$__jany_a" && compdef _jany_complete "$__jany_a"
+  done
+}
+if [[ -o interactive ]] && autoload -Uz add-zsh-hook 2>/dev/null; then
+  add-zsh-hook precmd _jany_compdef_aliases
+fi
 
 # dim hint after `jany <command> ` of what is still to say (the definition's [[placeholders]]).
-# Only lines starting with `jany ` (or an alias of it, like `j `) are touched. `[suggest] enabled = false`
+# Only lines starting with `jany ` (or an alias of it, like `j ` or `jpnpm='j pnpm'`) are touched. `[suggest] enabled = false`
 # in config.toml turns it off; JANY_SUGGEST=0/1 overrides that per shell (0 is checked here to skip starting jany).
 typeset -g _jany_suggest_buf="" _jany_suggest_text="" _jany_suggest_hl=""
 _jany_suggest() {
-  local __jany_s="" __jany_w1
+  local __jany_s=""
+  local -a reply
   if [[ ${JANY_SUGGEST:-1} != 0 && $BUFFER == *" " && $CURSOR -eq ${#BUFFER} ]]; then
-    __jany_w1=${${(z)BUFFER}[1]}
-    if [[ $__jany_w1 == jany || ${aliases[$__jany_w1]} == jany ]]; then
+    if _jany_words "$BUFFER"; then
       # redraws come often; ask jany only when the line changed
       if [[ $BUFFER != "$_jany_suggest_buf" ]]; then
         _jany_suggest_buf=$BUFFER
-        _jany_suggest_text="$(command jany --suggest -- "${(@Q)${(z)BUFFER}[2,-1]}" 2>/dev/null)"
+        _jany_suggest_text="$(command jany --suggest -- "${reply[@]}" 2>/dev/null)"
       fi
       __jany_s=$_jany_suggest_text
     fi

@@ -77,8 +77,8 @@ cargo install jany          # crates.io に出た後
 cargo install --path .
 jany --setup                  # OpenRouter の API キーを ~/.config/jany/config.toml(0600)に保存
 echo 'eval "$(jany --init zsh --locale ja)"' >> ~/.zshrc     # bash と fish もある。bash は未検証
-# 任意: `j` を `jany` の個人用エイリアスにし、補完も同じにする
-printf '%s\n' "alias j='jany'" 'compdef _jany_complete j' >> ~/.zshrc
+# 任意: エイリアスにも同じ補完と薄い候補が付く(zsh)。コマンド名まで含めたものでもよい
+printf '%s\n' "alias j='jany'" "alias jpnpm='j pnpm'" >> ~/.zshrc
 ```
 
 `jany --init` は 3 つのことをする: ラッパー関数を出力する、組み込みの定義(`find`、`curl`、`docker run`)を `~/.config/jany/cmd/` に置く、`/jany-register` と `/jany-update` のスキルを `~/.agents/skills/` に置く(`~/.claude/skills/` と `~/.codex/skills/` があればそこからリンクする)。すでにある定義は上書きしない。スキルは既定で英語版。日本語版は `--locale ja` で置く。`--init` はシェルを開くたびにスキルを書き直すので、フラグは rc の行に書いておく(上の例のように)。

@@ -77,8 +77,8 @@ cargo install jany          # after the crates.io release
 cargo install --path .
 jany --setup                  # store your OpenRouter API key in ~/.config/jany/config.toml (0600)
 echo 'eval "$(jany --init zsh)"' >> ~/.zshrc     # bash and fish too; bash is untested
-# optional: use `j` as a personal alias for `jany`, with the same completion
-printf '%s\n' "alias j='jany'" 'compdef _jany_complete j' >> ~/.zshrc
+# optional: aliases get the same completion and hint (zsh), also ones that name a command
+printf '%s\n' "alias j='jany'" "alias jpnpm='j pnpm'" >> ~/.zshrc
 ```
 
 `jany --init` does three things: prints the wrapper function, installs the built-in definitions (`find`, `curl`, `docker run`) into `~/.config/jany/cmd/`, and installs the `/jany-register` and `/jany-update` skills into `~/.agents/skills/` (linked from `~/.claude/skills/` and `~/.codex/skills/` when those exist). It never overwrites a definition that is already there. The skills are in English by default; `jany --init zsh --locale ja` installs the Japanese one (put the flag in your rc line, since `--init` rewrites the skill on every shell start).
