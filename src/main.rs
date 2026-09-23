@@ -33,8 +33,10 @@ usage: jany <command> [words ...] [flags] [-- passthrough args]
                                    and the built-in commands (find, curl, docker run) to ~/.config/jany/cmd
        jany --register <name> [sub] [--locale en|ja]
                                    scaffold ~/.config/jany/cmd/<name>/ (then: /jany-register <name>)
-       jany --update [name] [sub]    update the built-in commands you have not edited, and tell
-                                   what the others lack (then: /jany-update <name>)
+       jany --update [name] [sub] [--locale en|ja]
+                                   update the built-in commands you have not edited, and tell
+                                   what the others lack (then: /jany-update <name>);
+                                   also installs the skills that are missing
        jany --test <command> [sub]   run cases.toml of a command definition
        jany --setup                  save your OpenRouter API key
        jany --list                   show the command definitions found
@@ -146,8 +148,8 @@ fn run(args: Vec<String>) -> Result<i32, JanyError> {
         output::stdout(HELP);
         return Ok(0);
     }
-    if opts.locale.is_some() && !matches!(opts.action.as_deref(), Some("--init" | "--register")) {
-        return Err(JanyError::Usage("--locale only works with --init or --register".into()));
+    if opts.locale.is_some() && !matches!(opts.action.as_deref(), Some("--init" | "--register" | "--update")) {
+        return Err(JanyError::Usage("--locale only works with --init, --register or --update".into()));
     }
     let locale = opts.locale.unwrap_or_default();
     let cmd_dir = config::cmd_dir().ok_or_else(|| JanyError::Config("cannot determine command dir (HOME unset)".into()))?;
@@ -178,7 +180,18 @@ fn run(args: Vec<String>) -> Result<i32, JanyError> {
             return Ok(0);
         }
         "--register" => return skill::register(&cmd_dir, &words, locale),
-        "--update" => return skill::update(&cmd_dir, &words, &list(&cmd_dir)),
+        "--update" => {
+            // /jany-update is what the report below points at, so make sure the skill is there.
+            match skill::install_missing(opts.locale) {
+                Ok(placed) => {
+                    for p in placed {
+                        eprintln!("jany: installed {p}");
+                    }
+                }
+                Err(e) => eprintln!("jany: could not install the skills: {e}"),
+            }
+            return skill::update(&cmd_dir, &words, &list(&cmd_dir));
+        }
         "--test" => {
             let (schema, used) = schema::resolve(&cmd_dir, &words)?;
             if used != words.len() {

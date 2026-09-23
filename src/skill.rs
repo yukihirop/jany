@@ -117,6 +117,20 @@ pub fn skill_dir() -> Option<PathBuf> {
 /// Rewrites only files whose contents differ (switching the language rewrites them). Returns the paths written and links made.
 /// The other skills go next to jany-register (`JANY_SKILL_DIR=/x/jany-register` puts jany-update in `/x/jany-update`).
 pub fn install(locale: Locale) -> Result<Vec<String>, JanyError> {
+    install_skills(locale, false)
+}
+
+/// Places only the skill files that are not there yet (e.g. /jany-update for someone who set jany up before it
+/// existed), leaving the rest as they are. Without `--locale`, follows the language of the installed jany-register.
+pub fn install_missing(locale: Option<Locale>) -> Result<Vec<String>, JanyError> {
+    let locale = locale.unwrap_or_else(|| {
+        let installed = skill_dir().and_then(|d| std::fs::read_to_string(d.join("SKILL.md")).ok()).unwrap_or_default();
+        if installed.chars().any(|c| ('\u{3040}'..='\u{30ff}').contains(&c)) { Locale::Ja } else { Locale::En }
+    });
+    install_skills(locale, true)
+}
+
+fn install_skills(locale: Locale, only_missing: bool) -> Result<Vec<String>, JanyError> {
     let dir = skill_dir().ok_or_else(|| JanyError::Config("cannot determine skill dir (HOME unset)".into()))?;
     let root = dir.parent().map(Path::to_path_buf).unwrap_or_default();
     let skill_path = |name: &str| if name == "jany-register" { dir.clone() } else { root.join(name) };
@@ -124,7 +138,7 @@ pub fn install(locale: Locale) -> Result<Vec<String>, JanyError> {
     for (rel, body) in files(locale) {
         let (name, rest) = rel.split_once('/').expect("skill file paths start with the skill name");
         let p = skill_path(name).join(rest);
-        if std::fs::read_to_string(&p).map(|cur| cur == *body).unwrap_or(false) {
+        if (only_missing && p.exists()) || std::fs::read_to_string(&p).map(|cur| cur == *body).unwrap_or(false) {
             continue;
         }
         if let Some(parent) = p.parent() {

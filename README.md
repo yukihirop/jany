@@ -107,7 +107,7 @@ jany's own actions are flags, so `<command>` is always the tool's name:
 | `jany --list` | the definitions found, with an example each |
 | `jany --test find` | run a definition's `cases.toml` (jev answers are mocked) |
 | `/jany-register tar` | create and fill `~/.config/jany/cmd/tar/` with the agent skill |
-| `jany --update` | after upgrading jany: replace the built-ins you have not edited, and list what the others lack |
+| `jany --update` | after upgrading jany: replace the built-ins you have not edited, list what the others lack, and install the skills that are missing |
 | `/jany-update tar` | add only what a definition lacks, with the agent skill; existing rules and cases stay |
 | `jany --init zsh\|bash\|fish` | the wrapper, plus built-ins and the skill (`--locale en\|ja`, default `en`) |
 | `jany --setup` | save the API key |
@@ -139,7 +139,7 @@ jany --update                 # built-ins you have not edited are replaced; the 
 /jany-update tar              # in Claude Code or Codex: add what tar lacks, then jany --test tar
 ```
 
-`jany --update` knows a built-in is unedited when every file matches a version jany has shipped (`examples/released.txt`). An edited built-in is left alone and listed, like your own definitions; `/jany-update` merges the new parts into it and keeps your edits.
+`jany --update` knows a built-in is unedited when every file matches a version jany has shipped (`examples/released.txt`). An edited built-in is left alone and listed, like your own definitions; `/jany-update` merges the new parts into it and keeps your edits. `jany --update` also installs `/jany-update` itself when it is missing (in the language of the installed `/jany-register`, or `--locale en|ja`); skill files already there are left alone.
 
 ## Config (optional)
 

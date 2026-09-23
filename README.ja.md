@@ -107,7 +107,7 @@ jany 自身の操作はフラグなので、`<command>` は常にツール名に
 | `jany --list` | 見つかった定義と、それぞれの例 |
 | `jany --test find` | 定義の `cases.toml` を回す(jev の答えはモック) |
 | `/jany-register tar` | エージェントのスキルで `~/.config/jany/cmd/tar/` を作って埋める |
-| `jany --update` | jany を上げた後に: 手を入れていない組み込み定義を置き換え、他の定義に足りないものを一覧する |
+| `jany --update` | jany を上げた後に: 手を入れていない組み込み定義を置き換え、他の定義に足りないものを一覧し、無いスキルを置く |
 | `/jany-update tar` | エージェントのスキルで、定義に足りないものだけを足す。既存の規則と cases はそのまま |
 | `jany --init zsh\|bash\|fish` | ラッパーと、組み込み定義とスキル(`--locale en\|ja`、既定は `en`) |
 | `jany --setup` | API キーを保存する |
@@ -139,7 +139,7 @@ jany --update                 # 手を入れていない組み込み定義は置
 /jany-update tar              # Claude Code か Codex で: tar に足りないものを足し、jany --test tar まで回す
 ```
 
-組み込み定義に手が入っていないかは、全ファイルが jany の出した版のどれかと一致するかで判断する(`examples/released.txt`)。編集済みの組み込み定義はそのまま残し、あなたの定義と同じく一覧に出す。`/jany-update` は、あなたの編集を残したまま新しい部分を取り込む。
+組み込み定義に手が入っていないかは、全ファイルが jany の出した版のどれかと一致するかで判断する(`examples/released.txt`)。編集済みの組み込み定義はそのまま残し、あなたの定義と同じく一覧に出す。`/jany-update` は、あなたの編集を残したまま新しい部分を取り込む。`/jany-update` スキル自体が無ければ `jany --update` が置く(言語は置いてある `/jany-register` に合わせる。`--locale en|ja` でも選べる)。すでにあるスキルのファイルは触らない。
 
 ## 設定(任意)
 
