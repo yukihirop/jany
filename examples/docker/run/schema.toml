@@ -355,4 +355,4 @@ args = []
 
 [confirm]
 preview_readonly = false
-unsafe_note = "--privileged gives the container full access to the host"
+unsafe_note = "this starts a container (with --privileged it gets full access to the host)"

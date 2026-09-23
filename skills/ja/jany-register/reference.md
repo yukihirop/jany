@@ -302,7 +302,8 @@ stdin に JSON、stdout に JSON。言語は問わない(find/curl は bash + jq
 
 - `argv`: 実行される argv。jany はこれを shell-quote して 1 行にする(実行はしない)
 - `preview`: `risk = "dangerous"` のとき、破壊せずに対象だけ見せる argv(find なら `-delete` を外したもの)
-- `risk`: `"none"` | `"unsafe"`(取り消しにくい: PUT/DELETE)| `"dangerous"`(破壊的: rm、find -delete)
+- `risk`: `"none"` | `"unsafe"`(状態を変える: POST/PUT/DELETE、コンテナの起動)| `"dangerous"`(破壊的: rm、find -delete)。config.toml に `[cmd.<name>] autorun = true` があると、規則だけで決まった `"none"` の行は入力行で見ずに実行される。状態を変えるもの(インストール、ファイルの書き込み、データの送信)は `"unsafe"` にする
+- 規則が素通しするだけの生の `-x` フラグは役割を `passthrough` にする。この役割の語がある行は autorun で実行しない
 - `pipe`: 後ろに `|` で繋ぐ argv(`["wc", "-l"]`)。無ければ null
 - `error`: 組み立てられないときの説明。あれば argv は無視される
 

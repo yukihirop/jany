@@ -2,7 +2,7 @@
 # jany assemble for docker run。
 #
 # stdin : {"tokens":[{"text","role","value","amount":{"n","unit","at_least"}|null,...}], "passthrough":[...], "answers":{}, "defaults":{"args":[...]}}
-# stdout: {"argv":[...], "preview":null, "risk":"none"|"unsafe", "pipe":null, "error":"..."|null}
+# stdout: {"argv":[...], "preview":null, "risk":"unsafe" (errors: "none"), "pipe":null, "error":"..."|null}
 #
 # argv の並び: docker run [switches] [--name] [-p …] [-v …] [-e …] [--env-file] [--network] [-w] [-u] [-m] [--cpus]
 #              [--restart] [--platform] [passthrough role の生フラグ] [defaults.args] IMAGE [cmd …] [-- の後ろ]
@@ -62,7 +62,8 @@ jq -c '
           + $after
         ),
         preview: null,
-        risk: (if ($flags | index("--privileged")) != null then "unsafe" else "none" end),
+        # unsafe: starting a container runs code and may bind ports or mount host dirs, so autorun never runs it
+        risk: "unsafe",
         pipe: null,
         error: null
       }

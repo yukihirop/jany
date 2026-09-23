@@ -15,7 +15,7 @@
 </p>
 
 <p align="center">
-  <b>jany</b> turns a loose pile of words — out of order, half-remembered, misspelled — into the command line you meant, and puts it on your prompt. <b>It never runs it.</b> Enter is yours.
+  <b>jany</b> turns a loose pile of words — out of order, half-remembered, misspelled — into the command line you meant, and puts it on your prompt. <b>It never runs it</b> unless you opt in per command. Enter is yours.
 </p>
 
 > [!NOTE]
@@ -65,7 +65,7 @@ jany generalises [jind](https://github.com/yukihirop/jind) (jev × find) and [ju
 - **jev** — anything left over goes to [jev](https://openrouter.ai) (TypeSafe System One, via OpenRouter) in **one request**: "what is the role of each word?" plus the extra questions the schema declares (which unit? at least or at most? a typo of which table word?). jev only picks from fixed choices and returns probabilities; it never generates the command.
 - **repair** — fixes what jev cannot see word by word: attach `days` to `7`, let `except` claim the names after it, pair `first_name amanda` into key and value.
 - **assemble.sh** — the command's own script (stdin JSON → stdout JSON) turns the role-tagged words into `argv`. It also says how risky the result is.
-- **output** — the line goes to stdout, everything else to stderr. When the words can't be turned into a command (unresolved, or below a confidence floor), jany exits non-zero and puts `jany <command> --hint` on the prompt instead, with the reason as a comment. A `dangerous` result (find `-delete`) is previewed first with a read-only run. An `unsafe` one (curl `DELETE`, docker `--privileged`) gets a one-line note.
+- **output** — the line goes to stdout, everything else to stderr. When the words can't be turned into a command (unresolved, or below a confidence floor), jany exits non-zero and puts `jany <command> --hint` on the prompt instead, with the reason as a comment. A `dangerous` result (find `-delete`) is previewed first with a read-only run. An `unsafe` one (anything that changes state: curl `POST`/`DELETE`, `docker run`) gets a one-line note, and `autorun` leaves it on the prompt.
 
 One jev call is 200–700 ms and under $0.0001.
 
@@ -77,13 +77,15 @@ cargo install jany          # after the crates.io release
 cargo install --path .
 jany --setup                  # store your OpenRouter API key in ~/.config/jany/config.toml (0600)
 echo 'eval "$(jany --init zsh)"' >> ~/.zshrc     # bash and fish too; bash is untested
-# optional: use `j` as a personal alias for `jany`, with the same completion
-printf '%s\n' "alias j='jany'" 'compdef _jany_complete j' >> ~/.zshrc
+# optional: aliases get the same completion and hint (zsh), also ones that name a command
+printf '%s\n' "alias j='jany'" "alias jpnpm='j pnpm'" >> ~/.zshrc
 ```
 
 `jany --init` does three things: prints the wrapper function, installs the built-in definitions (`find`, `curl`, `docker run`) into `~/.config/jany/cmd/`, and installs the `/jany-register` and `/jany-update` skills into `~/.agents/skills/` (linked from `~/.claude/skills/` and `~/.codex/skills/` when those exist). It never overwrites a definition that is already there. The skills are in English by default; `jany --init zsh --locale ja` installs the Japanese one (put the flag in your rc line, since `--init` rewrites the skill on every shell start).
 
 In zsh the wrapper also shows a dim hint of what you can still say after `jany <command> ` (the definition's `[[placeholders]]`), e.g. `jany find src ` → `<file|dir> <*.log> <older than N days> <delete|count>`. It never calls jev. `[suggest] enabled = false` in `~/.config/jany/config.toml` turns it off; `JANY_SUGGEST=0` / `1` overrides that for one shell. bash and fish don't have it.
+
+`[cmd.<name>] autorun = true` in `~/.config/jany/config.toml` lets the zsh wrapper run the line instead of putting it on the prompt, but only when the rules decided every word and the definition calls it risk `"none"`: no jev, no words after `--`, no raw `-x` flags, no preview or pipe. `jany <command> -- --help` and `-- --version` with nothing else also run. `autorun_also = ["pnpm install"]` lets lines that start with those words run even when the definition calls them `"unsafe"` (compared word by word on the final argv, so `jany pnpm install react`, which becomes `pnpm add react`, does not match; `"dangerous"` never runs). The line is shown on stderr and still goes into your history. Anything else goes on the prompt as before. Off by default, and bash / fish always put the line on the prompt.
 
 `OPENROUTER_API_KEY` in the environment takes precedence; a key saved by `jind setup` or `jurl setup` is picked up too. Tested on macOS with zsh.
 
@@ -158,6 +160,10 @@ content_type = "text/plain"
 
 [cmd.find.aliases]
 dl = "~/Downloads"
+
+[cmd.pnpm]
+autorun = true               # zsh: run rule-only, risk "none" lines right away
+autorun_also = ["pnpm install"]   # ...and these, even when "unsafe"
 ```
 
 ## Where it is weak

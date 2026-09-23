@@ -15,7 +15,7 @@
 </p>
 
 <p align="center">
-  <b>jany</b> は、順番がばらばらで、うろ覚えで、typo まじりの語の並びを、意図したコマンド行に直してプロンプトに置く。<b>実行はしない。</b>Enter を押すのはあなた。
+  <b>jany</b> は、順番がばらばらで、うろ覚えで、typo まじりの語の並びを、意図したコマンド行に直してプロンプトに置く。<b>実行はしない</b>(コマンドごとに on にしたときを除く)。Enter を押すのはあなた。
 </p>
 
 > [!NOTE]
@@ -65,7 +65,7 @@ jany は [jind](https://github.com/yukihirop/jind)(jev × find)と [jurl](https:
 - **jev** — 残った語は [jev](https://openrouter.ai)(TypeSafe System One、OpenRouter 経由)に **1 リクエスト** で聞く: 「それぞれの語の役割は何か」と、schema が宣言した追加の質問(単位はどれか、以上か以下か、どの表の語の typo か)。jev は決められた選択肢から選んで確率を返すだけで、コマンドを生成はしない。
 - **repair** — 語ごとの jev には見えないことを直す: `days` を `7` に付ける、`except` の後ろの名前を除外に取る、`first_name amanda` を key と value の組にする。
 - **assemble.sh** — コマンド自身のスクリプト(stdin JSON → stdout JSON)が、役割の付いた語から `argv` を組む。結果がどれだけ危ないかもここで返す。
-- **出力** — コマンド行は stdout、それ以外は stderr。語を解釈できない、または確信度が下限を下回ってコマンドを組めないときは、非ゼロで終わり、代わりに `jany <command> --hint` を理由のコメント付きでプロンプトに置く。`dangerous` な結果(find の `-delete`)は先に read-only で実行してプレビューする。`unsafe` なもの(curl の `DELETE`、docker の `--privileged`)には 1 行の注意が付く。
+- **出力** — コマンド行は stdout、それ以外は stderr。語を解釈できない、または確信度が下限を下回ってコマンドを組めないときは、非ゼロで終わり、代わりに `jany <command> --hint` を理由のコメント付きでプロンプトに置く。`dangerous` な結果(find の `-delete`)は先に read-only で実行してプレビューする。`unsafe` なもの(状態を変えるもの: curl の `POST` / `DELETE`、`docker run`)には 1 行の注意が付き、`autorun` でも入力行に置く。
 
 jev の呼び出しは 1 回 200〜700 ms、$0.0001 未満。
 
@@ -77,13 +77,15 @@ cargo install jany          # crates.io に出た後
 cargo install --path .
 jany --setup                  # OpenRouter の API キーを ~/.config/jany/config.toml(0600)に保存
 echo 'eval "$(jany --init zsh --locale ja)"' >> ~/.zshrc     # bash と fish もある。bash は未検証
-# 任意: `j` を `jany` の個人用エイリアスにし、補完も同じにする
-printf '%s\n' "alias j='jany'" 'compdef _jany_complete j' >> ~/.zshrc
+# 任意: エイリアスにも同じ補完と薄い候補が付く(zsh)。コマンド名まで含めたものでもよい
+printf '%s\n' "alias j='jany'" "alias jpnpm='j pnpm'" >> ~/.zshrc
 ```
 
 `jany --init` は 3 つのことをする: ラッパー関数を出力する、組み込みの定義(`find`、`curl`、`docker run`)を `~/.config/jany/cmd/` に置く、`/jany-register` と `/jany-update` のスキルを `~/.agents/skills/` に置く(`~/.claude/skills/` と `~/.codex/skills/` があればそこからリンクする)。すでにある定義は上書きしない。スキルは既定で英語版。日本語版は `--locale ja` で置く。`--init` はシェルを開くたびにスキルを書き直すので、フラグは rc の行に書いておく(上の例のように)。
 
 zsh では、`jany <command> ` の後ろに、まだ言えることを薄く出す(定義の `[[placeholders]]`)。例: `jany find src ` → `<file|dir> <*.log> <older than N days> <delete|count>`。jev は呼ばない。`~/.config/jany/config.toml` に `[suggest] enabled = false` と書くと消える。`JANY_SUGGEST=0` / `1` はそのシェルだけ上書きする。bash と fish には無い。
+
+`~/.config/jany/config.toml` に `[cmd.<name>] autorun = true` を書くと、zsh のラッパーが行を入力行に置かずにそのまま実行する。ただし、全部の語が規則で決まり、定義が risk `"none"` を返したときだけ(jev 無し、`--` の後ろ無し、生の `-x` フラグ無し、preview / pipe 無し)。ほかに何も無い `jany <command> -- --help` / `-- --version` も実行する。`autorun_also = ["pnpm install"]` と書くと、その語で始まる行は定義が `"unsafe"` と言っても実行する(最終的な argv の先頭を語単位で比べるので、`pnpm add react` になる `jany pnpm install react` は当たらない。`"dangerous"` は常に実行しない)。行は stderr に出し、履歴にも残る。それ以外は今までどおり入力行に置く。既定は off。bash / fish は常に入力行。
 
 環境変数の `OPENROUTER_API_KEY` が優先される。`jind setup` や `jurl setup` で保存したキーも拾う。macOS の zsh で確認している。
 
@@ -158,6 +160,10 @@ content_type = "text/plain"
 
 [cmd.find.aliases]
 dl = "~/Downloads"
+
+[cmd.pnpm]
+autorun = true               # zsh: 規則だけで決まった risk "none" の行はすぐ実行する
+autorun_also = ["pnpm install"]   # この語で始まる行は "unsafe" でも実行する
 ```
 
 ## 弱いところ
