@@ -20,7 +20,7 @@ jany() {
   for __jany_a in "$@"; do
     case "$__jany_a" in
       --) break ;;
-      --init|--list|--test|--register|--setup|-h|--help|-V|--version) command jany "$@"; return $? ;;
+      --init|--list|--test|--register|--update|--setup|-h|--help|-V|--version) command jany "$@"; return $? ;;
     esac
   done
   # on failure jany still prints a line to try next (`jany find --hint  # ...`), so place it either way
@@ -84,7 +84,7 @@ jany() {
   for __jany_a in "$@"; do
     case "$__jany_a" in
       --) break ;;
-      --init|--list|--test|--register|--setup|-h|--help|-V|--version) command jany "$@"; return $? ;;
+      --init|--list|--test|--register|--update|--setup|-h|--help|-V|--version) command jany "$@"; return $? ;;
     esac
   done
   __jany_cmd="$(command jany "$@")"
@@ -116,7 +116,7 @@ function jany
         switch $a
             case --
                 break
-            case --init --list --test --register --setup -h --help -V --version
+            case --init --list --test --register --update --setup -h --help -V --version
                 command jany $argv
                 return $status
         end

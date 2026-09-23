@@ -81,7 +81,7 @@ echo 'eval "$(jany --init zsh)"' >> ~/.zshrc     # bash and fish too; bash is un
 printf '%s\n' "alias j='jany'" 'compdef _jany_complete j' >> ~/.zshrc
 ```
 
-`jany --init` does three things: prints the wrapper function, installs the built-in definitions (`find`, `curl`, `docker run`) into `~/.config/jany/cmd/`, and installs the `/jany-register` skill into `~/.agents/skills/` (linked from `~/.claude/skills/` and `~/.codex/skills/` when those exist). It never overwrites a definition you have edited. The skill is in English by default; `jany --init zsh --locale ja` installs the Japanese one (put the flag in your rc line, since `--init` rewrites the skill on every shell start).
+`jany --init` does three things: prints the wrapper function, installs the built-in definitions (`find`, `curl`, `docker run`) into `~/.config/jany/cmd/`, and installs the `/jany-register` and `/jany-update` skills into `~/.agents/skills/` (linked from `~/.claude/skills/` and `~/.codex/skills/` when those exist). It never overwrites a definition that is already there. The skills are in English by default; `jany --init zsh --locale ja` installs the Japanese one (put the flag in your rc line, since `--init` rewrites the skill on every shell start).
 
 In zsh the wrapper also shows a dim hint of what you can still say after `jany <command> ` (the definition's `[[placeholders]]`), e.g. `jany find src ` → `<file|dir> <*.log> <older than N days> <delete|count>`. It never calls jev. `JANY_SUGGEST=0` turns it off. bash and fish don't have it.
 
@@ -107,6 +107,8 @@ jany's own actions are flags, so `<command>` is always the tool's name:
 | `jany --list` | the definitions found, with an example each |
 | `jany --test find` | run a definition's `cases.toml` (jev answers are mocked) |
 | `/jany-register tar` | create and fill `~/.config/jany/cmd/tar/` with the agent skill |
+| `jany --update` | after upgrading jany: replace the built-ins you have not edited, and list what the others lack |
+| `/jany-update tar` | add only what a definition lacks, with the agent skill; existing rules and cases stay |
 | `jany --init zsh\|bash\|fish` | the wrapper, plus built-ins and the skill (`--locale en\|ja`, default `en`) |
 | `jany --setup` | save the API key |
 
@@ -127,6 +129,17 @@ A definition lives in `~/.config/jany/cmd/<name>[/<sub>]/`:
 | `cases.toml` | words → expected argv, with jev's answers written down; `jany --test` refuses answers to questions jany did not ask |
 
 The skill reads a reference of every schema key and the two worked examples (`find`, `curl`) before writing. The rule of thumb from jind and jurl carries over: cover the 80 % you actually type, pass the rest through after `--`, and do not trust an `assemble.sh` that has no cases.
+
+## Updating definitions
+
+A new jany can bring new definition features (such as `[[placeholders]]`) and updated built-ins, but `jany --init` never touches a definition that is already in place. After upgrading, run:
+
+```sh
+jany --update                 # built-ins you have not edited are replaced; the rest are listed
+/jany-update tar              # in Claude Code or Codex: add what tar lacks, then jany --test tar
+```
+
+`jany --update` knows a built-in is unedited when every file matches a version jany has shipped (`examples/released.txt`). An edited built-in is left alone and listed, like your own definitions; `/jany-update` merges the new parts into it and keeps your edits.
 
 ## Config (optional)
 

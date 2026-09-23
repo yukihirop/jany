@@ -28,11 +28,13 @@ jany — jev x any command. Turn loosely ordered words into a command line.
 usage: jany <command> [words ...] [flags] [-- passthrough args]
        jany --init <zsh|bash|fish> [--locale en|ja]
                                    print the shell wrapper (eval \"$(jany --init zsh)\");
-                                   also installs the /jany-register skill to ~/.agents/skills
+                                   also installs the /jany-register and /jany-update skills to ~/.agents/skills
                                    (in English, or Japanese with --locale ja)
                                    and the built-in commands (find, curl, docker run) to ~/.config/jany/cmd
        jany --register <name> [sub] [--locale en|ja]
                                    scaffold ~/.config/jany/cmd/<name>/ (then: /jany-register <name>)
+       jany --update [name] [sub]    update the built-in commands you have not edited, and tell
+                                   what the others lack (then: /jany-update <name>)
        jany --test <command> [sub]   run cases.toml of a command definition
        jany --setup                  save your OpenRouter API key
        jany --list                   show the command definitions found
@@ -56,7 +58,8 @@ env:
   JEV_MODEL            default typesafe/jev-1.13
   JANY_CMD_DIR           where command definitions live (default ~/.config/jany/cmd)
   JANY_CONFIG_DIR        default ~/.config/jany
-  JANY_SKILL_DIR         where `jany --init` puts the skill (default ~/.agents/skills/jany-register)
+  JANY_SKILL_DIR         where `jany --init` puts the skill (default ~/.agents/skills/jany-register;
+                         /jany-update goes next to it)
   JANY_NO_JEV=1          same as --no-jev
 ";
 
@@ -67,7 +70,7 @@ struct Opts {
     hint: bool,
     /// Language of the skill and scaffold for --init / --register.
     locale: Option<skill::Locale>,
-    /// jany's own action (--init / --register / --test / --setup / --list). It is a flag so that <command> is always the tool's name.
+    /// jany's own action (--init / --register / --update / --test / --setup / --list). It is a flag so that <command> is always the tool's name.
     action: Option<String>,
 }
 
@@ -119,7 +122,7 @@ fn run(args: Vec<String>) -> Result<i32, JanyError> {
                 opts.locale = Some(skill::Locale::parse(&v)?);
             }
             s if s.starts_with("--locale=") => opts.locale = Some(skill::Locale::parse(&s["--locale=".len()..])?),
-            "--init" | "--register" | "--test" | "--setup" | "--list" => {
+            "--init" | "--register" | "--update" | "--test" | "--setup" | "--list" => {
                 if let Some(prev) = &opts.action {
                     return Err(JanyError::Usage(format!("{prev} and {a} together")));
                 }
@@ -161,7 +164,7 @@ fn run(args: Vec<String>) -> Result<i32, JanyError> {
                         eprintln!("jany: installed {c}");
                     }
                 }
-                Err(e) => eprintln!("jany: could not install the jany-register skill: {e}"),
+                Err(e) => eprintln!("jany: could not install the skills: {e}"),
             }
             // Built-in definitions (find / curl / docker run). Only the missing ones are placed.
             match skill::install_commands(&cmd_dir) {
@@ -175,6 +178,7 @@ fn run(args: Vec<String>) -> Result<i32, JanyError> {
             return Ok(0);
         }
         "--register" => return skill::register(&cmd_dir, &words, locale),
+        "--update" => return skill::update(&cmd_dir, &words, &list(&cmd_dir)),
         "--test" => {
             let (schema, used) = schema::resolve(&cmd_dir, &words)?;
             if used != words.len() {
