@@ -58,6 +58,7 @@ jany --test <name> [sub] --explain      # 語ごとの役割表を見る
 
 - 1 で書き出した語の並びを全部 cases にする。規則だけで決まるものは `no_jev = true`
 - jev の答えは `[case.jev]` に Mock で書く。**聞かれないキーに答えると失敗する**ので、`--explain` で何が聞かれるか見てから書く
+- cases の `words` は `jany <name> --hint` の例としてそのまま人に見せる(`error` / `setup` / `defaults` 付きの case と、先頭 8 本より後は出ない)。**よく使う言い方を先頭に**、人が打ちそうな語順で書く。`[[roles]]` の `jev` の説明も `--hint` に出る
 - 全部通るまで schema / assemble を直す。**cases 無しの assemble.sh は信用しない**(LLM が書くと `//` の罠のような間違いが入る)
 - 通ったら実機で 2〜3 本: `jany <name> …`(jev を実際に呼ぶ。`OPENROUTER_API_KEY` が要る)。stdout に出た行が意図通りか見る。jany は実行しないので安全
 

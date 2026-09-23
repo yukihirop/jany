@@ -91,6 +91,7 @@ jany <command> [words ...] [flags] [-- passthrough args]
 |---|---|
 | `--explain` | per-word role, confidence, and whether a rule or jev decided it (stderr) |
 | `--no-jev` | offline only; unresolved words are an error |
+| `--hint` | what you can say to `<command>` (its roles) and examples from its `cases.toml` (stderr) |
 | `-- …` | passed through untouched (what that means is up to the command: find options, curl flags, the container command for docker run) |
 
 jany's own actions are flags, so `<command>` is always the tool's name:

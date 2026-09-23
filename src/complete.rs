@@ -35,7 +35,9 @@ pub fn run(cmd_dir: &Path, typed: &[String]) -> i32 {
         .filter(|w| !w.starts_with('-'))
         .cloned()
         .collect();
+    // 打ちかけがフラグ(`find --h`)なら、それが prefix なので上書きしない。
     if !typed_words.is_empty()
+        && !prefix.starts_with('-')
         && crate::schema::resolve(cmd_dir, &typed_words)
             .map(|(_, used)| used == typed_words.len())
             .unwrap_or(false)
@@ -193,6 +195,7 @@ pub fn run(cmd_dir: &Path, typed: &[String]) -> i32 {
     for (f, d) in [
         ("--explain", "show how each word was classified"),
         ("--no-jev", "offline only"),
+        ("--hint", "what you can say, with examples"),
         ("--", "pass the rest through untouched"),
     ] {
         if f.starts_with(prefix) {

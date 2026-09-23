@@ -4,6 +4,7 @@ mod color;
 mod complete;
 mod config;
 mod error;
+mod hint;
 mod init;
 mod interpret;
 mod jev;
@@ -40,6 +41,7 @@ wrapper from `jany --init` puts it on your prompt. Everything else goes to stder
 
 flags:
       --explain   show how each word was classified (stderr)
+      --hint      show what you can say to <command>, with examples from its cases.toml (stderr)
       --no-jev    never call jev; unresolved words are an error
   -h, --help
   -V, --version
@@ -57,6 +59,7 @@ env:
 struct Opts {
     explain: bool,
     no_jev: bool,
+    hint: bool,
     /// jany 自身の操作(--init / --register / --test / --setup / --list)。<command> は常にツール名なのでフラグにしてある。
     action: Option<String>,
 }
@@ -93,6 +96,7 @@ fn run(args: Vec<String>) -> Result<i32, JanyError> {
             "--" => after = true,
             "--explain" => opts.explain = true,
             "--no-jev" => opts.no_jev = true,
+            "--hint" => opts.hint = true,
             "--init" | "--register" | "--test" | "--setup" | "--list" => {
                 if let Some(prev) = &opts.action {
                     return Err(JanyError::Usage(format!("{prev} and {a} together")));
@@ -166,7 +170,19 @@ fn run(args: Vec<String>) -> Result<i32, JanyError> {
         _ => {}
     }
 
+    if opts.hint
+        && let Err(JanyError::NoCommand(..)) = schema::resolve(&cmd_dir, &words)
+        && let Some(subs) = hint::subcommands(&cmd_dir, &words)
+    {
+        // `jany docker --hint`: docker 自体に定義は無いので、下にある定義を案内する。
+        eprint!("{subs}");
+        return Ok(0);
+    }
     let (schema, used) = schema::resolve(&cmd_dir, &words)?;
+    if opts.hint {
+        // stdout は空のまま(ラッパーが入力行に何も載せない)。
+        return Ok(hint::run(&schema));
+    }
     let cfg = config::load()?;
     let on = color::stderr_enabled();
 
