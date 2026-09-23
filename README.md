@@ -77,7 +77,7 @@ echo 'eval "$(jany --init zsh)"' >> ~/.zshrc     # bash and fish too; bash is un
 printf '%s\n' "alias j='jany'" 'compdef _jany_complete j' >> ~/.zshrc
 ```
 
-`jany --init` does three things: prints the wrapper function, installs the built-in definitions (`find`, `curl`, `docker run`) into `~/.config/jany/cmd/`, and installs the `/jany-register` skill into `~/.agents/skills/` (linked from `~/.claude/skills/` and `~/.codex/skills/` when those exist). It never overwrites a definition you have edited.
+`jany --init` does three things: prints the wrapper function, installs the built-in definitions (`find`, `curl`, `docker run`) into `~/.config/jany/cmd/`, and installs the `/jany-register` skill into `~/.agents/skills/` (linked from `~/.claude/skills/` and `~/.codex/skills/` when those exist). It never overwrites a definition you have edited. The skill is in English by default; `jany --init zsh --locale ja` installs the Japanese one (put the flag in your rc line, since `--init` rewrites the skill on every shell start).
 
 `OPENROUTER_API_KEY` in the environment takes precedence; a key saved by `jind setup` or `jurl setup` is picked up too. Tested on macOS with zsh.
 
@@ -101,7 +101,7 @@ jany's own actions are flags, so `<command>` is always the tool's name:
 | `jany --list` | the definitions found, with an example each |
 | `jany --test find` | run a definition's `cases.toml` (jev answers are mocked) |
 | `/jany-register tar` | create and fill `~/.config/jany/cmd/tar/` with the agent skill |
-| `jany --init zsh\|bash\|fish` | the wrapper, plus built-ins and the skill |
+| `jany --init zsh\|bash\|fish` | the wrapper, plus built-ins and the skill (`--locale en\|ja`, default `en`) |
 | `jany --setup` | save the API key |
 
 ## Adding a command

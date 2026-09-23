@@ -1,17 +1,47 @@
 //! `/jany-register` スキルの配布と `jany --register <name>` の雛形。
-//! スキル本体は `skill/jany-register/` をバイナリに埋め込み、`jany --init` のたびに
+//! スキル本体は `skills/<locale>/jany-register/`(en / ja)をバイナリに埋め込み、`jany --init` のたびに
 //! `~/.agents/skills/jany-register/` へ書く(Claude Code / Codex のどちらからも読める場所)。
 
 use crate::error::JanyError;
 use std::path::{Path, PathBuf};
 
-/// 配布するファイル。examples は examples/ の find・curl そのもの。
-const FILES: &[(&str, &str)] = &[
-    ("SKILL.md", include_str!("../skill/jany-register/SKILL.md")),
-    ("reference.md", include_str!("../skill/jany-register/reference.md")),
-    ("template/schema.toml", include_str!("../skill/jany-register/template/schema.toml")),
-    ("template/assemble.sh", include_str!("../skill/jany-register/template/assemble.sh")),
-    ("template/cases.toml", include_str!("../skill/jany-register/template/cases.toml")),
+/// スキルの言語。`jany --init <shell> --locale ja` で選ぶ。既定は en。
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+pub enum Locale {
+    #[default]
+    En,
+    Ja,
+}
+
+impl Locale {
+    pub const ALL: &[&str] = &["en", "ja"];
+
+    pub fn parse(s: &str) -> Result<Locale, JanyError> {
+        match s {
+            "en" => Ok(Locale::En),
+            "ja" => Ok(Locale::Ja),
+            other => Err(JanyError::Usage(format!("unknown locale `{other}` ({})", Locale::ALL.join(", ")))),
+        }
+    }
+}
+
+/// 言語ごとのスキル本体(`skills/<locale>/jany-register/`)。
+macro_rules! skill_files {
+    ($l:literal) => {
+        &[
+            ("SKILL.md", include_str!(concat!("../skills/", $l, "/jany-register/SKILL.md"))),
+            ("reference.md", include_str!(concat!("../skills/", $l, "/jany-register/reference.md"))),
+            ("template/schema.toml", include_str!(concat!("../skills/", $l, "/jany-register/template/schema.toml"))),
+            ("template/assemble.sh", include_str!(concat!("../skills/", $l, "/jany-register/template/assemble.sh"))),
+            ("template/cases.toml", include_str!(concat!("../skills/", $l, "/jany-register/template/cases.toml"))),
+        ]
+    };
+}
+const SKILL_EN: &[(&str, &str)] = skill_files!("en");
+const SKILL_JA: &[(&str, &str)] = skill_files!("ja");
+
+/// どの言語でも同じもの。examples は examples/ の find・curl そのもの。
+const SKILL_EXAMPLES: &[(&str, &str)] = &[
     ("examples/find/schema.toml", include_str!("../examples/find/schema.toml")),
     ("examples/find/assemble.sh", include_str!("../examples/find/assemble.sh")),
     ("examples/find/cases.toml", include_str!("../examples/find/cases.toml")),
@@ -19,6 +49,15 @@ const FILES: &[(&str, &str)] = &[
     ("examples/curl/assemble.sh", include_str!("../examples/curl/assemble.sh")),
     ("examples/curl/cases.toml", include_str!("../examples/curl/cases.toml")),
 ];
+
+/// 配布するファイル(スキル本体 + examples)。
+fn files(locale: Locale) -> impl Iterator<Item = &'static (&'static str, &'static str)> {
+    let body = match locale {
+        Locale::En => SKILL_EN,
+        Locale::Ja => SKILL_JA,
+    };
+    body.iter().chain(SKILL_EXAMPLES)
+}
 
 /// 組み込みのコマンド定義。`jany --init` が `~/.config/jany/cmd/<name>/` にまだ無いものだけ置く。
 /// 中身は examples/ の原本そのもの(examples と同じ)。
@@ -69,11 +108,11 @@ pub fn skill_dir() -> Option<PathBuf> {
     Some(Path::new(&home).join(".agents").join("skills").join("jany-register"))
 }
 
-/// 中身が違うファイルだけ書き直す。戻り値は書いたパスと作ったリンク。
-pub fn install() -> Result<Vec<String>, JanyError> {
+/// 中身が違うファイルだけ書き直す(言語を切り替えたら書き直される)。戻り値は書いたパスと作ったリンク。
+pub fn install(locale: Locale) -> Result<Vec<String>, JanyError> {
     let dir = skill_dir().ok_or_else(|| JanyError::Config("cannot determine skill dir (HOME unset)".into()))?;
     let mut changed = Vec::new();
-    for (rel, body) in FILES {
+    for (rel, body) in files(locale) {
         let p = dir.join(rel);
         if std::fs::read_to_string(&p).map(|cur| cur == *body).unwrap_or(false) {
             continue;
@@ -114,7 +153,7 @@ fn set_executable(p: &Path, on: bool) -> std::io::Result<()> {
 }
 
 /// `jany --register <name> [sub…]`: 雛形 3 ファイルを置く。既にあれば触らない。
-pub fn register(cmd_dir: &Path, names: &[String]) -> Result<i32, JanyError> {
+pub fn register(cmd_dir: &Path, names: &[String], locale: Locale) -> Result<i32, JanyError> {
     if names.is_empty() {
         return Err(JanyError::Usage("jany --register <name> [sub …]  e.g. jany --register docker run".into()));
     }
@@ -132,7 +171,7 @@ pub fn register(cmd_dir: &Path, names: &[String]) -> Result<i32, JanyError> {
     }
     std::fs::create_dir_all(&dir)?;
     for rel in ["schema.toml", "assemble.sh", "cases.toml"] {
-        let body = FILES.iter().find(|(r, _)| *r == format!("template/{rel}")).map(|(_, b)| *b).expect("template embedded");
+        let body = files(locale).find(|(r, _)| *r == format!("template/{rel}")).map(|(_, b)| *b).expect("template embedded");
         let p = dir.join(rel);
         std::fs::write(&p, body.replace("__ARGV0__", &argv0).replace("__NAME__", &name))?;
         set_executable(&p, rel.ends_with(".sh"))?;

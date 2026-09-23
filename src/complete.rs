@@ -54,10 +54,29 @@ pub fn run(cmd_dir: &Path, typed: &[String]) -> i32 {
         .find(|w| w.starts_with("--"))
         .map(String::as_str)
     {
+        Some("--locale") => {
+            // `--locale en` の後にはもう出さない。
+            if context.last().map(String::as_str) != Some("--locale") {
+                return print(out);
+            }
+            for (l, d) in [("en", "English skill"), ("ja", "Japanese skill")] {
+                if l.starts_with(prefix) {
+                    out.push((l.into(), d.into()));
+                }
+            }
+            return print(out);
+        }
         Some("--init") => {
-            for s in ["zsh", "bash", "fish"] {
+            // シェルを打った後は --locale だけ。
+            let shell_given = context.last().is_some_and(|w| !w.starts_with('-'));
+            let cands: &[(&str, &str)] = if shell_given {
+                &[("--locale", "language of the /jany-register skill (en, ja)")]
+            } else {
+                &[("zsh", "shell wrapper"), ("bash", "shell wrapper"), ("fish", "shell wrapper")]
+            };
+            for (s, d) in cands {
                 if s.starts_with(prefix) {
-                    out.push((s.into(), "shell wrapper".into()));
+                    out.push((s.to_string(), d.to_string()));
                 }
             }
             return print(out);
