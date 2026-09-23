@@ -85,7 +85,7 @@ printf '%s\n' "alias j='jany'" 'compdef _jany_complete j' >> ~/.zshrc
 
 In zsh the wrapper also shows a dim hint of what you can still say after `jany <command> ` (the definition's `[[placeholders]]`), e.g. `jany find src ` → `<file|dir> <*.log> <older than N days> <delete|count>`. It never calls jev. `[suggest] enabled = false` in `~/.config/jany/config.toml` turns it off; `JANY_SUGGEST=0` / `1` overrides that for one shell. bash and fish don't have it.
 
-`[cmd.<name>] autorun = true` in `~/.config/jany/config.toml` lets the zsh wrapper run the line instead of putting it on the prompt, but only when the rules decided every word and the definition calls it risk `"none"`: no jev, no words after `--`, no raw `-x` flags, no preview or pipe. `jany <command> -- --help` and `-- --version` with nothing else also run. The line is shown on stderr and still goes into your history. Anything else goes on the prompt as before. Off by default, and bash / fish always put the line on the prompt.
+`[cmd.<name>] autorun = true` in `~/.config/jany/config.toml` lets the zsh wrapper run the line instead of putting it on the prompt, but only when the rules decided every word and the definition calls it risk `"none"`: no jev, no words after `--`, no raw `-x` flags, no preview or pipe. `jany <command> -- --help` and `-- --version` with nothing else also run. `autorun_also = ["pnpm install"]` lets lines that start with those words run even when the definition calls them `"unsafe"` (compared word by word on the final argv, so `jany pnpm install react`, which becomes `pnpm add react`, does not match; `"dangerous"` never runs). The line is shown on stderr and still goes into your history. Anything else goes on the prompt as before. Off by default, and bash / fish always put the line on the prompt.
 
 `OPENROUTER_API_KEY` in the environment takes precedence; a key saved by `jind setup` or `jurl setup` is picked up too. Tested on macOS with zsh.
 
@@ -163,6 +163,7 @@ dl = "~/Downloads"
 
 [cmd.pnpm]
 autorun = true               # zsh: run rule-only, risk "none" lines right away
+autorun_also = ["pnpm install"]   # ...and these, even when "unsafe"
 ```
 
 ## Where it is weak

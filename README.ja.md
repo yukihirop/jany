@@ -85,7 +85,7 @@ printf '%s\n' "alias j='jany'" 'compdef _jany_complete j' >> ~/.zshrc
 
 zsh では、`jany <command> ` の後ろに、まだ言えることを薄く出す(定義の `[[placeholders]]`)。例: `jany find src ` → `<file|dir> <*.log> <older than N days> <delete|count>`。jev は呼ばない。`~/.config/jany/config.toml` に `[suggest] enabled = false` と書くと消える。`JANY_SUGGEST=0` / `1` はそのシェルだけ上書きする。bash と fish には無い。
 
-`~/.config/jany/config.toml` に `[cmd.<name>] autorun = true` を書くと、zsh のラッパーが行を入力行に置かずにそのまま実行する。ただし、全部の語が規則で決まり、定義が risk `"none"` を返したときだけ(jev 無し、`--` の後ろ無し、生の `-x` フラグ無し、preview / pipe 無し)。ほかに何も無い `jany <command> -- --help` / `-- --version` も実行する。行は stderr に出し、履歴にも残る。それ以外は今までどおり入力行に置く。既定は off。bash / fish は常に入力行。
+`~/.config/jany/config.toml` に `[cmd.<name>] autorun = true` を書くと、zsh のラッパーが行を入力行に置かずにそのまま実行する。ただし、全部の語が規則で決まり、定義が risk `"none"` を返したときだけ(jev 無し、`--` の後ろ無し、生の `-x` フラグ無し、preview / pipe 無し)。ほかに何も無い `jany <command> -- --help` / `-- --version` も実行する。`autorun_also = ["pnpm install"]` と書くと、その語で始まる行は定義が `"unsafe"` と言っても実行する(最終的な argv の先頭を語単位で比べるので、`pnpm add react` になる `jany pnpm install react` は当たらない。`"dangerous"` は常に実行しない)。行は stderr に出し、履歴にも残る。それ以外は今までどおり入力行に置く。既定は off。bash / fish は常に入力行。
 
 環境変数の `OPENROUTER_API_KEY` が優先される。`jind setup` や `jurl setup` で保存したキーも拾う。macOS の zsh で確認している。
 
@@ -163,6 +163,7 @@ dl = "~/Downloads"
 
 [cmd.pnpm]
 autorun = true               # zsh: 規則だけで決まった risk "none" の行はすぐ実行する
+autorun_also = ["pnpm install"]   # この語で始まる行は "unsafe" でも実行する
 ```
 
 ## 弱いところ

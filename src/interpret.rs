@@ -61,20 +61,31 @@ pub fn oracle_from_config(cfg: &Config) -> Result<jev::client::OpenRouter, JanyE
 }
 
 impl Run {
-    /// Whether the line may run without a look on the prompt (`[cmd.<name>] autorun = true`):
-    /// rules alone decided every word, the definition calls it risk "none", nothing needs a preview
+    /// Whether the line may run without a look on the prompt: rules alone decided every word,
+    /// the risk is allowed (see `risk_allowed`), nothing needs a preview
     /// or a pipe, and nothing went through unread (words after `--`, or raw flags the rules only
     /// tagged with the `passthrough` role). The one exception is `jany <cmd> -- --help` / `-- --version`:
     /// no words at all and that single long flag. Short -h / -v are not help everywhere (`df -h`).
-    pub fn autorun_safe(&self, passthrough: &[String]) -> bool {
+    pub fn autorun_safe(&self, passthrough: &[String], cmd: &crate::config::CmdConfig) -> bool {
         let help_only = self.tokens.is_empty() && matches!(passthrough, [p] if p == "--help" || p == "--version");
         self.jev.is_none()
             && self.tokens.iter().all(|t| t.source == crate::token::Source::Rule && !t.is("passthrough"))
             && (passthrough.is_empty() || help_only)
-            && self.out.risk == "none"
+            && self.risk_allowed(cmd)
             && self.out.preview.is_none()
             && self.out.pipe.is_none()
             && self.out.argv.as_ref().is_some_and(|a| !a.is_empty())
+    }
+
+    /// risk "none" with `autorun = true`, or anything short of "dangerous" whose argv starts with
+    /// one of `autorun_also` word by word (`pnpm install` matches `pnpm install --force`, not `pnpm installx`).
+    fn risk_allowed(&self, cmd: &crate::config::CmdConfig) -> bool {
+        let argv = self.out.argv.as_deref().unwrap_or(&[]);
+        let listed = cmd.autorun_also.iter().any(|line| {
+            let head: Vec<&str> = line.split_whitespace().collect();
+            !head.is_empty() && argv.len() >= head.len() && argv.iter().zip(&head).all(|(a, h)| a == h)
+        });
+        (self.out.risk == "none" && cmd.autorun) || (self.out.risk != "dangerous" && listed)
     }
 }
 
@@ -97,20 +108,43 @@ mod tests {
         Run { tokens, jev: None, out }
     }
 
+    fn on() -> crate::config::CmdConfig {
+        crate::config::CmdConfig { autorun: true, ..Default::default() }
+    }
+
     #[test]
     fn autorun_only_when_rules_decided_a_safe_line() {
-        assert!(run(&[("action", Source::Rule), ("script", Source::Rule)], "none").autorun_safe(&[]));
-        assert!(!run(&[("action", Source::Rule)], "unsafe").autorun_safe(&[]));
-        assert!(!run(&[("action", Source::Rule)], "dangerous").autorun_safe(&[]));
-        assert!(!run(&[("action", Source::Rule), ("package", Source::Jev)], "none").autorun_safe(&[]));
-        assert!(!run(&[("action", Source::Rule), ("passthrough", Source::Rule)], "none").autorun_safe(&[]));
-        assert!(run(&[], "none").autorun_safe(&["--help".into()]));
-        assert!(run(&[], "none").autorun_safe(&["--version".into()]));
-        assert!(!run(&[], "none").autorun_safe(&["-h".into()]));
-        assert!(!run(&[], "none").autorun_safe(&["store".into(), "prune".into()]));
-        assert!(!run(&[("action", Source::Rule)], "none").autorun_safe(&["--help".into()]));
+        assert!(run(&[("action", Source::Rule), ("script", Source::Rule)], "none").autorun_safe(&[], &on()));
+        assert!(!run(&[("action", Source::Rule)], "unsafe").autorun_safe(&[], &on()));
+        assert!(!run(&[("action", Source::Rule)], "dangerous").autorun_safe(&[], &on()));
+        assert!(!run(&[("action", Source::Rule), ("package", Source::Jev)], "none").autorun_safe(&[], &on()));
+        assert!(!run(&[("action", Source::Rule), ("passthrough", Source::Rule)], "none").autorun_safe(&[], &on()));
+        assert!(run(&[], "none").autorun_safe(&["--help".into()], &on()));
+        assert!(run(&[], "none").autorun_safe(&["--version".into()], &on()));
+        assert!(!run(&[], "none").autorun_safe(&["-h".into()], &on()));
+        assert!(!run(&[], "none").autorun_safe(&["store".into(), "prune".into()], &on()));
+        assert!(!run(&[("action", Source::Rule)], "none").autorun_safe(&["--help".into()], &on()));
         let mut piped = run(&[("action", Source::Rule)], "none");
         piped.out.pipe = Some(vec!["wc".into(), "-l".into()]);
-        assert!(!piped.autorun_safe(&[]));
+        assert!(!piped.autorun_safe(&[], &on()));
+        // autorun off: nothing runs
+        assert!(!run(&[("action", Source::Rule)], "none").autorun_safe(&[], &Default::default()));
+    }
+
+    #[test]
+    fn autorun_also_lets_listed_unsafe_lines_run() {
+        let also = crate::config::CmdConfig { autorun_also: vec!["pnpm install".into()], ..Default::default() };
+        let with_argv = |argv: &[&str], risk: &str| {
+            let mut r = run(&[("action", Source::Rule)], risk);
+            r.out.argv = Some(argv.iter().map(|s| s.to_string()).collect());
+            r
+        };
+        assert!(with_argv(&["pnpm", "install"], "unsafe").autorun_safe(&[], &also));
+        assert!(with_argv(&["pnpm", "install", "--frozen-lockfile"], "unsafe").autorun_safe(&[], &also));
+        assert!(!with_argv(&["pnpm", "add", "react"], "unsafe").autorun_safe(&[], &also));
+        assert!(!with_argv(&["pnpm", "installx"], "unsafe").autorun_safe(&[], &also));
+        assert!(!with_argv(&["pnpm", "install"], "dangerous").autorun_safe(&[], &also));
+        // autorun_also alone does not turn on the other "none" lines
+        assert!(!with_argv(&["pnpm", "run", "dev"], "none").autorun_safe(&[], &also));
     }
 }

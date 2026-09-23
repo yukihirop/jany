@@ -50,7 +50,8 @@ wrapper from `jany --init` puts it on your prompt. Everything else goes to stder
 With `[cmd.<name>] autorun = true` in config.toml, the zsh wrapper runs the line
 instead when rules alone decided it and it is risk \"none\" (no jev, no words after
 `--`, no raw flags, no preview or pipe; `jany <command> -- --help` / `-- --version`
-alone is fine too). It still goes into the shell history.
+alone is fine too). It still goes into the shell history. `autorun_also = [\"pnpm install\"]`
+also runs lines starting with those words when they are risk \"unsafe\" (never \"dangerous\").
 
 flags:
       --explain   show how each word was classified (stderr)
@@ -305,9 +306,8 @@ fn translate(schema: &schema::Schema, words: &[String], passthrough: &[String], 
 
     let line = output::render(argv, r.out.pipe.as_deref());
     // Only the zsh wrapper sets JANY_CAN_RUN (it runs the line on AUTORUN_EXIT); elsewhere the line goes on the prompt as before.
-    let autorun = cfg.cmd.get(&schema.command.name).is_some_and(|c| c.autorun)
-        && std::env::var("JANY_CAN_RUN").is_ok_and(|v| v == "1")
-        && r.autorun_safe(passthrough);
+    let autorun = std::env::var("JANY_CAN_RUN").is_ok_and(|v| v == "1")
+        && cfg.cmd.get(&schema.command.name).is_some_and(|c| r.autorun_safe(passthrough, c));
     if autorun {
         eprintln!("{}", paint(on, C::Dim, &format!("$ {line}")));
     }
