@@ -50,7 +50,7 @@ pub fn retry_line(command: &[String], e: &crate::error::JanyError) -> String {
     use crate::error::JanyError;
     let why = match e {
         JanyError::Unresolved(s) => format!("could not interpret: {}", s.trim_end_matches(" (jev disabled)")),
-        JanyError::LowConfidence(c, _) => format!("not sure enough (confidence {c:.2})"),
+        JanyError::LowConfidence(c, _) => format!("not sure enough: confidence {c:.2}"),
         other => other.to_string(),
     };
     let mut argv = vec!["jany".to_string()];
