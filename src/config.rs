@@ -11,6 +11,10 @@
 //!
 //! [cmd.curl.defaults]      # overrides the schema's [defaults]
 //! content_type = "text/plain"
+//!
+//! [cmd.pnpm]
+//! autorun = true           # the zsh wrapper runs the line instead of putting it on the prompt,
+//!                          # when rules alone decided it and it is risk "none" (see interpret::Run::autorun_safe)
 //! ```
 
 use crate::error::JanyError;
@@ -49,6 +53,8 @@ pub struct Suggest {
 pub struct CmdConfig {
     pub defaults: toml::Table,
     pub aliases: BTreeMap<String, String>,
+    /// Run the line right away (through the zsh wrapper) when it is safe to. Off by default.
+    pub autorun: bool,
 }
 
 impl Default for Jev {

@@ -15,7 +15,7 @@
 </p>
 
 <p align="center">
-  <b>jany</b> turns a loose pile of words — out of order, half-remembered, misspelled — into the command line you meant, and puts it on your prompt. <b>It never runs it.</b> Enter is yours.
+  <b>jany</b> turns a loose pile of words — out of order, half-remembered, misspelled — into the command line you meant, and puts it on your prompt. <b>It never runs it</b> unless you opt in per command. Enter is yours.
 </p>
 
 > [!NOTE]
@@ -84,6 +84,8 @@ printf '%s\n' "alias j='jany'" 'compdef _jany_complete j' >> ~/.zshrc
 `jany --init` does three things: prints the wrapper function, installs the built-in definitions (`find`, `curl`, `docker run`) into `~/.config/jany/cmd/`, and installs the `/jany-register` and `/jany-update` skills into `~/.agents/skills/` (linked from `~/.claude/skills/` and `~/.codex/skills/` when those exist). It never overwrites a definition that is already there. The skills are in English by default; `jany --init zsh --locale ja` installs the Japanese one (put the flag in your rc line, since `--init` rewrites the skill on every shell start).
 
 In zsh the wrapper also shows a dim hint of what you can still say after `jany <command> ` (the definition's `[[placeholders]]`), e.g. `jany find src ` → `<file|dir> <*.log> <older than N days> <delete|count>`. It never calls jev. `[suggest] enabled = false` in `~/.config/jany/config.toml` turns it off; `JANY_SUGGEST=0` / `1` overrides that for one shell. bash and fish don't have it.
+
+`[cmd.<name>] autorun = true` in `~/.config/jany/config.toml` lets the zsh wrapper run the line instead of putting it on the prompt, but only when the rules decided every word and the definition calls it risk `"none"`: no jev, no words after `--`, no raw `-x` flags, no preview or pipe. The line is shown on stderr and still goes into your history. Anything else goes on the prompt as before. Off by default, and bash / fish always put the line on the prompt.
 
 `OPENROUTER_API_KEY` in the environment takes precedence; a key saved by `jind setup` or `jurl setup` is picked up too. Tested on macOS with zsh.
 
@@ -158,6 +160,9 @@ content_type = "text/plain"
 
 [cmd.find.aliases]
 dl = "~/Downloads"
+
+[cmd.pnpm]
+autorun = true               # zsh: run rule-only, risk "none" lines right away
 ```
 
 ## Where it is weak

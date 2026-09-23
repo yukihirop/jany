@@ -13,7 +13,7 @@ pub fn script(shell: &str) -> Result<&'static str, JanyError> {
 }
 
 /// `print -z` pushes text onto the input line of the next prompt.
-const ZSH: &str = r#"# jany: put the assembled command on the next prompt instead of running it
+const ZSH: &str = r#"# jany: put the assembled command on the next prompt instead of running it (or run it: [cmd.<name>] autorun)
 jany() {
   local __jany_a __jany_cmd __jany_status
   # jany's own actions (--list, --init, --test, ...) print for reading, not for the prompt
@@ -24,8 +24,14 @@ jany() {
     esac
   done
   # on failure jany still prints a line to try next (`jany find --hint  # ...`), so place it either way
-  __jany_cmd="$(command jany "$@")"
+  __jany_cmd="$(JANY_CAN_RUN=1 command jany "$@")"
   __jany_status=$?
+  # 3: `[cmd.<name>] autorun = true` and the line is safe to run as is. Keep it in the history and run it
+  if [[ $__jany_status -eq 3 && -n $__jany_cmd ]]; then
+    print -s -- "$__jany_cmd"
+    eval "$__jany_cmd"
+    return
+  fi
   [ -n "$__jany_cmd" ] && print -z -- "$__jany_cmd"
   return $__jany_status
 }

@@ -47,6 +47,9 @@ jany's own actions are flags so that <command> is always the tool's name.
 
 jany never runs the command: it prints one shell-quoted line on stdout, and the
 wrapper from `jany --init` puts it on your prompt. Everything else goes to stderr.
+With `[cmd.<name>] autorun = true` in config.toml, the zsh wrapper runs the line
+instead when rules alone decided it and it is risk \"none\" (no jev, no words after
+`--`, no raw flags, no preview or pipe). It still goes into the shell history.
 
 flags:
       --explain   show how each word was classified (stderr)
@@ -64,6 +67,7 @@ env:
                          /jany-update goes next to it)
   JANY_NO_JEV=1          same as --no-jev
   JANY_SUGGEST=0|1       turn the dim hint in zsh off/on (overrides [suggest] enabled in config.toml)
+  JANY_CAN_RUN=1         set by the zsh wrapper: it can run the line (exit status 3 asks it to)
 ";
 
 #[derive(Default)]
@@ -298,9 +302,20 @@ fn translate(schema: &schema::Schema, words: &[String], passthrough: &[String], 
         _ => {}
     }
 
-    output::stdout(&format!("{}\n", output::render(argv, r.out.pipe.as_deref())));
-    Ok(0)
+    let line = output::render(argv, r.out.pipe.as_deref());
+    // Only the zsh wrapper sets JANY_CAN_RUN (it runs the line on AUTORUN_EXIT); elsewhere the line goes on the prompt as before.
+    let autorun = cfg.cmd.get(&schema.command.name).is_some_and(|c| c.autorun)
+        && std::env::var("JANY_CAN_RUN").is_ok_and(|v| v == "1")
+        && r.autorun_safe(passthrough);
+    if autorun {
+        eprintln!("{}", paint(on, C::Dim, &format!("$ {line}")));
+    }
+    output::stdout(&format!("{line}\n"));
+    Ok(if autorun { AUTORUN_EXIT } else { 0 })
 }
+
+/// Tells the zsh wrapper to run the printed line instead of putting it on the prompt.
+const AUTORUN_EXIT: i32 = 3;
 
 /// Runs the preview argv (which the schema declares read-only) and shows its first N lines on stderr.
 fn preview(argv: &[String], lines: usize, on: bool) -> Result<(), JanyError> {

@@ -59,3 +59,52 @@ pub fn oracle_from_config(cfg: &Config) -> Result<jev::client::OpenRouter, JanyE
         max_retries: 3,
     })
 }
+
+impl Run {
+    /// Whether the line may run without a look on the prompt (`[cmd.<name>] autorun = true`):
+    /// rules alone decided every word, the definition calls it risk "none", nothing needs a preview
+    /// or a pipe, and nothing went through unread (words after `--`, or raw flags the rules only
+    /// tagged with the `passthrough` role).
+    pub fn autorun_safe(&self, passthrough: &[String]) -> bool {
+        self.jev.is_none()
+            && self.tokens.iter().all(|t| t.source == crate::token::Source::Rule && !t.is("passthrough"))
+            && passthrough.is_empty()
+            && self.out.risk == "none"
+            && self.out.preview.is_none()
+            && self.out.pipe.is_none()
+            && self.out.argv.as_ref().is_some_and(|a| !a.is_empty())
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::token::Source;
+
+    fn run(roles: &[(&str, Source)], risk: &str) -> Run {
+        let tokens = roles
+            .iter()
+            .map(|(r, s)| {
+                let mut t = Token::new("w");
+                t.set_rule(r);
+                t.source = *s;
+                t
+            })
+            .collect();
+        let out = Assembled { argv: Some(vec!["pnpm".into(), "run".into(), "dev".into()]), preview: None, risk: risk.into(), pipe: None, error: None, confidence: 1.0 };
+        Run { tokens, jev: None, out }
+    }
+
+    #[test]
+    fn autorun_only_when_rules_decided_a_safe_line() {
+        assert!(run(&[("action", Source::Rule), ("script", Source::Rule)], "none").autorun_safe(&[]));
+        assert!(!run(&[("action", Source::Rule)], "unsafe").autorun_safe(&[]));
+        assert!(!run(&[("action", Source::Rule)], "dangerous").autorun_safe(&[]));
+        assert!(!run(&[("action", Source::Rule), ("package", Source::Jev)], "none").autorun_safe(&[]));
+        assert!(!run(&[("action", Source::Rule), ("passthrough", Source::Rule)], "none").autorun_safe(&[]));
+        assert!(!run(&[], "none").autorun_safe(&["--help".into()]));
+        let mut piped = run(&[("action", Source::Rule)], "none");
+        piped.out.pipe = Some(vec!["wc".into(), "-l".into()]);
+        assert!(!piped.autorun_safe(&[]));
+    }
+}
