@@ -16,7 +16,7 @@ jind(jev × find、`../jind`)と jurl(jev × curl、`../jurl`)を汎化した 1 
 - clippy の警告は 0 件(CI が `-D warnings` で回す)。`src/` は `.rs` が 21 ファイル(`jev/` の 2 つを含む)
 - **`src/` のコメントは英語**(2026-09-23、ユーザー指示)。新しく書くコメントも英語にする。会話・CLAUDE.md・docs/HOST.md・skills/ja は日本語のまま
 - stdout への書き出しは `output::stdout()` を通す(2026-09-23)。`print!` はパイプが閉じると panic する(`jany --list | head -1`)
-- **`jany <cmd> --hint`**(2026-09-23): `[[roles]]` の `jev` 説明と cases.toml の words(error / setup / defaults 付きを除く先頭 8 本)を stderr に出す。`src/hint.rs`
+- **`jany <cmd> --hint`**(2026-09-23): `[[roles]]` の `jev` 説明と cases.toml の words(error / setup / defaults 付きを除く先頭 8 本)を stderr に出す。`src/hint.rs`。**変換に失敗したとき**(Unresolved / LowConfidence / Assemble)は stderr にエラー、stdout に `jany find --hint  # could not interpret: edtied, wthin` を出して非ゼロ終了し、ラッパーは非ゼロでも stdout があれば入力行に置く(2026-09-23、ユーザー選択)。コメント部は語ごとに shell-quote し、jany の引数解析は `#` の語で止まる(zsh 既定の interactivecomments off 対策、`zsh -f` で確認済み)
 - 2026-09-22 に `~/JavaScriptProjects/jany` から `~/RustProjects/jany` へ移動した(ホストを Rust にすると決めたため)
 - `examples/find/` は jind 0.1.0 を定義ファイル 3 つに書き直したもの。`assemble.sh` は実際に動かして jind の README の例 6 本 + 衝突 1 本で同じ argv が出ることを確認済み
 - `examples/curl/` は jurl 0.1.2 を同じ 3 つに書き直したもの(2026-09-22)。`assemble.sh` は jurl の `-n --no-jev` 実出力 16 本 + interpret.rs / EXAMPLES の jev 例 7 本で同じ argv。規則は Python で最小エンジンを書いて `jurl --explain` の role 列と 18 本一致(scratch、リポジトリには入れていない)。DSL に足したものは `docs/HOST.md`「curl を書いて分かったこと」

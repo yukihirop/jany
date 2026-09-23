@@ -43,6 +43,23 @@ pub fn text(schema: &Schema, on: bool) -> String {
     s
 }
 
+/// The line put on the prompt when a command could not be built:
+/// `jany find --hint  # could not interpret: edtied, wthin`. Every word after `#` is shell-quoted,
+/// so even with interactive comments off (zsh's default) it only reaches jany as words it ignores.
+pub fn retry_line(command: &[String], e: &crate::error::JanyError) -> String {
+    use crate::error::JanyError;
+    let why = match e {
+        JanyError::Unresolved(s) => format!("could not interpret: {}", s.trim_end_matches(" (jev disabled)")),
+        JanyError::LowConfidence(c, _) => format!("not sure enough (confidence {c:.2})"),
+        other => other.to_string(),
+    };
+    let mut argv = vec!["jany".to_string()];
+    argv.extend(command.iter().cloned());
+    argv.push("--hint".into());
+    let comment: Vec<String> = why.split_whitespace().map(|w| shell_words::quote(w).into_owned()).collect();
+    format!("{}  # {}", shell_words::join(&argv), comment.join(" "))
+}
+
 /// For an intermediate name without a definition (`jany docker --hint`), the definitions under it with one example each. None if it is not such a name.
 pub fn subcommands(cmd_dir: &std::path::Path, words: &[String]) -> Option<String> {
     if words.is_empty() || words.iter().any(|w| w.is_empty() || w.contains('/') || w.starts_with('.')) {

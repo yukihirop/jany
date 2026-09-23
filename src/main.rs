@@ -100,6 +100,9 @@ fn run(args: Vec<String>) -> Result<i32, JanyError> {
         }
         match a.as_str() {
             "--" => after = true,
+            // The rest is a comment, e.g. from the retry line below when the shell's
+            // interactive comments are off (zsh's default) and `#` arrives as a word.
+            "#" => break,
             "--explain" => opts.explain = true,
             "--no-jev" => opts.no_jev = true,
             "--hint" => opts.hint = true,
@@ -198,6 +201,20 @@ fn run(args: Vec<String>) -> Result<i32, JanyError> {
         // stdout stays empty (so the wrapper puts nothing on the input line).
         return Ok(hint::run(&schema));
     }
+    match translate(&schema, &words[used..], &passthrough, &opts) {
+        Err(e @ (JanyError::Unresolved(_) | JanyError::LowConfidence(..) | JanyError::Assemble(_))) => {
+            // Could not build the command: put `jany <command> --hint` on the prompt instead,
+            // with what went wrong as a comment, so the next step is one Enter away.
+            eprintln!("jany: {e}");
+            output::stdout(&format!("{}\n", hint::retry_line(&words[..used], &e)));
+            Ok(e.exit_code())
+        }
+        other => other,
+    }
+}
+
+/// Interprets the words after the command name and prints the command line.
+fn translate(schema: &schema::Schema, words: &[String], passthrough: &[String], opts: &Opts) -> Result<i32, JanyError> {
     let cfg = config::load()?;
     let on = color::stderr_enabled();
 
@@ -208,12 +225,12 @@ fn run(args: Vec<String>) -> Result<i32, JanyError> {
         oracle = interpret::oracle_from_config(&cfg)?;
         Some(&oracle)
     };
-    let r = match interpret::run(&schema, &cfg, &words[used..], &passthrough, oracle_ref, None) {
+    let r = match interpret::run(schema, &cfg, words, passthrough, oracle_ref, None) {
         Ok(r) => r,
         Err(JanyError::Unresolved(s)) => {
             // Show which words stayed unresolved in a table, expanding aliases first as interpret does.
             let aliases = cfg.cmd.get(&schema.command.name).map(|c| c.aliases.clone()).unwrap_or_default();
-            let tokens = rules::classify(&schema, &config::expand_aliases(&aliases, &words[used..]));
+            let tokens = rules::classify(schema, &config::expand_aliases(&aliases, words));
             output::explain(&tokens, None);
             return Err(JanyError::Unresolved(s));
         }
