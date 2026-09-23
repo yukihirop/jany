@@ -32,3 +32,9 @@ docker/run/assemble.sh 3257cc2ee44c9382
 docker/run/cases.toml 808f3b0610363c86
 docker/run/cases.toml f33012b5dec16f50
 docker/run/cases.toml 0dec656c29a9c519
+curl/schema.toml dbaebe4c936676c3
+curl/assemble.sh 24549b8a751113c4
+curl/cases.toml ce80563fa94f21a4
+docker/run/schema.toml 88c209b8c75f4fe9
+docker/run/assemble.sh 37bf607f92c1e806
+docker/run/cases.toml 28bfcb9ba46ee8b9

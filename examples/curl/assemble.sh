@@ -7,7 +7,8 @@
 #         repair.pair 済みなので field_key の次は field_value、裸の query の次も field_value。
 # stdout: {"argv":[...], "preview":null, "risk":"none"|"unsafe", "pipe":null, "error":"..."|null}
 #
-# risk = "unsafe" は PUT / PATCH / DELETE。ホストは入力行に置く前に stderr に一言注意を出すだけ (実行はしない)。preview は使わない。
+# risk = "unsafe" は GET / HEAD / OPTIONS 以外 (POST も。サーバー側を変えうる)。ホストは入力行に置く前に stderr に一言注意を出す。
+# [cmd.curl] autorun = true のときは none (読むだけ) の行だけ確認なしで実行される。preview は使わない。
 set -euo pipefail
 
 jq -c '
@@ -136,7 +137,7 @@ jq -c '
                  + [$headers[] | "-H", (.[0] + ": " + .[1])]
                  + $body_args + (.passthrough // [])),
           preview: null,
-          risk: (if ($method | IN("PUT", "PATCH", "DELETE")) then "unsafe" else "none" end),
+          risk: (if ($method | IN("GET", "HEAD", "OPTIONS")) then "none" else "unsafe" end),
           pipe: null,
           error: null }
     end

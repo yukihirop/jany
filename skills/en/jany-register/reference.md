@@ -302,7 +302,7 @@ JSON on stdin, JSON on stdout. Any language works (find/curl use bash + jq).
 
 - `argv`: the argv to run. jany shell-quotes it into one line (it never runs it)
 - `preview`: with `risk = "dangerous"`, an argv that shows only the targets without destroying them (for find, the one without `-delete`)
-- `risk`: `"none"` | `"unsafe"` (hard to undo: PUT/DELETE) | `"dangerous"` (destructive: rm, find -delete). With `[cmd.<name>] autorun = true` in config.toml, a `"none"` line decided by rules alone runs without a look on the prompt, so give `"unsafe"` to anything that changes state (installs, writes files, sends data)
+- `risk`: `"none"` | `"unsafe"` (changes state: POST/PUT/DELETE, starting a container) | `"dangerous"` (destructive: rm, find -delete). With `[cmd.<name>] autorun = true` in config.toml, a `"none"` line decided by rules alone runs without a look on the prompt, so give `"unsafe"` to anything that changes state (installs, writes files, sends data)
 - Raw `-x` flags the rules only pass along: give them the role `passthrough`. autorun never runs a line with that role
 - `pipe`: an argv to connect after a `|` (`["wc", "-l"]`). null if none
 - `error`: an explanation when it cannot be assembled. If present, argv is ignored

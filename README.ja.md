@@ -65,7 +65,7 @@ jany は [jind](https://github.com/yukihirop/jind)(jev × find)と [jurl](https:
 - **jev** — 残った語は [jev](https://openrouter.ai)(TypeSafe System One、OpenRouter 経由)に **1 リクエスト** で聞く: 「それぞれの語の役割は何か」と、schema が宣言した追加の質問(単位はどれか、以上か以下か、どの表の語の typo か)。jev は決められた選択肢から選んで確率を返すだけで、コマンドを生成はしない。
 - **repair** — 語ごとの jev には見えないことを直す: `days` を `7` に付ける、`except` の後ろの名前を除外に取る、`first_name amanda` を key と value の組にする。
 - **assemble.sh** — コマンド自身のスクリプト(stdin JSON → stdout JSON)が、役割の付いた語から `argv` を組む。結果がどれだけ危ないかもここで返す。
-- **出力** — コマンド行は stdout、それ以外は stderr。語を解釈できない、または確信度が下限を下回ってコマンドを組めないときは、非ゼロで終わり、代わりに `jany <command> --hint` を理由のコメント付きでプロンプトに置く。`dangerous` な結果(find の `-delete`)は先に read-only で実行してプレビューする。`unsafe` なもの(curl の `DELETE`、docker の `--privileged`)には 1 行の注意が付く。
+- **出力** — コマンド行は stdout、それ以外は stderr。語を解釈できない、または確信度が下限を下回ってコマンドを組めないときは、非ゼロで終わり、代わりに `jany <command> --hint` を理由のコメント付きでプロンプトに置く。`dangerous` な結果(find の `-delete`)は先に read-only で実行してプレビューする。`unsafe` なもの(状態を変えるもの: curl の `POST` / `DELETE`、`docker run`)には 1 行の注意が付き、`autorun` でも入力行に置く。
 
 jev の呼び出しは 1 回 200〜700 ms、$0.0001 未満。
 

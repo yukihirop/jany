@@ -358,6 +358,6 @@ args = []                                # jurl の defaults.curl_args。`curl -
 
 [confirm]
 # jany は実行せずシェルの入力行に置く (決定 2026-09-22)。curl に preview は無い。
-# risk = "unsafe" (PUT/PATCH/DELETE) は入力行に置く前に stderr に「取り消せないメソッド」と一言出すだけ。
+# risk = "unsafe" (GET/HEAD/OPTIONS 以外) は入力行に置く前に stderr に一言出す。autorun は none の行だけ走らせる。
 # jurl の confirm_below / confirm_below_unsafe / -y / e は無くなった (入力行そのものが確認)。reject_below だけ残る。
-unsafe_note = "this method cannot be undone"
+unsafe_note = "this request can change data on the server"

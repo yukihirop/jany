@@ -19,11 +19,13 @@
 words = ["post", "localhost", "application/json", "profile.first_name=job", "profile.family_name=amanda"]
 argv  = ["curl", "-sS", "-X", "POST", "http://localhost/", "-H", "Content-Type: application/json", "-H", "Accept: application/json",
          "--data", '{"profile":{"first_name":"job","family_name":"amanda"}}']
+risk  = "unsafe"
 
 [[case]]
 words = ["profile.first_name=job", "localhost", "json", "POST"]      # 順序は関係ない、表は大文字小文字を区別しない
 argv  = ["curl", "-sS", "-X", "POST", "http://localhost/", "-H", "Content-Type: application/json", "-H", "Accept: application/json",
          "--data", '{"profile":{"first_name":"job"}}']
+risk  = "unsafe"
 
 [[case]]
 words = ["api.github.com/repos/rust-lang/rust", "Accept:application/vnd.github+json"]
@@ -39,6 +41,7 @@ risk  = "unsafe"
 words = ["httpbin.org/post", "form", "user=me", "pass=x", "-k"]
 argv  = ["curl", "-sS", "-k", "-X", "POST", "https://httpbin.org/post", "-H", "Content-Type: application/x-www-form-urlencoded",
          "--data-urlencode", "user=me", "--data-urlencode", "pass=x"]
+risk  = "unsafe"
 
 [[case]]
 # -X / -H は次の語ごと読み替える (rules.next)。裸のポート、配列パス、`--` の後ろは素通し
@@ -51,6 +54,7 @@ risk  = "unsafe"
 [[case]]
 words = ["localhost", "multipart", "file=@a.png", "name=x"]
 argv  = ["curl", "-sS", "-X", "POST", "http://localhost/", "-H", "Content-Type: multipart/form-data", "-F", "file=@a.png", "-F", "name=x"]
+risk  = "unsafe"
 
 [[case]]
 words = ["delete", "localhost:8080/users/42"]
@@ -61,12 +65,14 @@ risk  = "unsafe"
 words = ["localhost", "@body.json"]
 argv  = ["curl", "-sS", "-X", "POST", "http://localhost/", "-H", "Content-Type: application/json", "-H", "Accept: application/json",
          "--data-binary", "@body.json"]
+risk  = "unsafe"
 
 [[case]]
 # クエリの空白は +、値付きフラグは 2 語で curl_flag / curl_flag_value、フラグは -X より前
 words = ["localhost/login", "form", "user=me", "q==a b", "-v", "--retry", "3"]
 argv  = ["curl", "-sS", "-v", "--retry", "3", "-X", "POST", "http://localhost/login?q=a+b",
          "-H", "Content-Type: application/x-www-form-urlencoded", "--data-urlencode", "user=me"]
+risk  = "unsafe"
 
 [[case]]
 words = [":3000/users", "page==2", "Authorization:Bearer tok"]
@@ -76,16 +82,19 @@ argv  = ["curl", "-sS", "http://localhost:3000/users?page=2", "-H", "Authorizati
 words = ["192.168.1.2:8080", "x=1"]                                   # 私有 IP は http
 argv  = ["curl", "-sS", "-X", "POST", "http://192.168.1.2:8080/", "-H", "Content-Type: application/json", "-H", "Accept: application/json",
          "--data", '{"x":"1"}']
+risk  = "unsafe"
 
 [[case]]
 words = ["localhost", "form", "profile.first_name=job", "tags[0]=a"]  # form はネストを profile[first_name] に平坦化
 argv  = ["curl", "-sS", "-X", "POST", "http://localhost/", "-H", "Content-Type: application/x-www-form-urlencoded",
          "--data-urlencode", "profile[first_name]=job", "--data-urlencode", "tags[0]=a"]
+risk  = "unsafe"
 
 [[case]]
 words = ["localhost", "price:=1.5", "zip=01234", "ok:=true", "bad:=abc"]   # := は JSON リテラル、読めなければ文字列
 argv  = ["curl", "-sS", "-X", "POST", "http://localhost/", "-H", "Content-Type: application/json", "-H", "Accept: application/json",
          "--data", '{"price":1.5,"zip":"01234","ok":true,"bad":"abc"}']
+risk  = "unsafe"
 
 [[case]]
 words = ["--unknown-flag", "localhost"]                                # 知らないオプションは単独で素通し
@@ -111,6 +120,7 @@ no_jev = true
 words = ["psot", "localhsot", "3000", "users", "first_name", "job"]
 argv  = ["curl", "-sS", "-X", "POST", "http://localhost:3000/users", "-H", "Content-Type: application/json", "-H", "Accept: application/json",
          "--data", '{"first_name":"job"}']
+risk  = "unsafe"
 confidence = 0.76           # job: 配置の確からしさ key-first 0.97*0.06 vs value-first 0.02*0.90 → 0.76
 [case.jev]
 "role.0" = { choice = "method", probs = { method = 0.93, url_path = 0.03 } }
@@ -161,6 +171,7 @@ argv  = ["curl", "-sS", "https://api.agify.io/?name=michael"]
 words = ["post", "localhost", "first_name", "job"]
 argv  = ["curl", "-sS", "-X", "POST", "http://localhost/", "-H", "Content-Type: application/json", "-H", "Accept: application/json",
          "--data", '{"first_name":"job"}']
+risk  = "unsafe"
 not_asked = ["get_intent", "role.0", "role.1"]
 state = { method_known = "POST", "hints.0" = "method" }
 [case.jev]
@@ -172,6 +183,7 @@ state = { method_known = "POST", "hints.0" = "method" }
 words = ["localhost", "Authorization:Bearer-s3cr3t", "first_name", "job"]
 argv  = ["curl", "-sS", "-X", "POST", "http://localhost/", "-H", "Content-Type: application/json", "-H", "Accept: application/json",
          "-H", "Authorization: Bearer-s3cr3t", "--data", '{"first_name":"job"}']
+risk  = "unsafe"
 state = { tokens = ["localhost", "<header>", "first_name", "job"] }
 [case.jev]
 "role.2" = { choice = "field_key", probs = { field_key = 0.97 } }
@@ -183,6 +195,7 @@ state = { tokens = ["localhost", "<header>", "first_name", "job"] }
 words = ["post", "localhost", "age", "30", "active", "true"]
 argv  = ["curl", "-sS", "-X", "POST", "http://localhost/", "-H", "Content-Type: application/json", "-H", "Accept: application/json",
          "--data", '{"age":30,"active":"true"}']
+risk  = "unsafe"
 [case.jev]
 "role.2"  = { choice = "field_key", probs = { field_key = 0.97 } }
 "role.3"  = { choice = "field_value", probs = { field_value = 0.9, port = 0.05 } }
@@ -197,6 +210,7 @@ words = ["post", "localhost", "jsno", "a=1"]
 defaults = { content_type = "text/plain" }
 argv  = ["curl", "-sS", "-X", "POST", "http://localhost/", "-H", "Content-Type: application/json", "-H", "Accept: application/json",
          "--data", '{"a":"1"}']
+risk  = "unsafe"
 confidence = 0.8
 [case.jev]
 "role.2" = { choice = "content_type", probs = { content_type = 0.8, url_path = 0.1 } }
@@ -216,6 +230,7 @@ error = "unresolved: job"
 words = ["httpbin.org/anything", "post", "title", "hello", "world"]
 argv  = ["curl", "-sS", "-X", "POST", "https://httpbin.org/anything", "-H", "Content-Type: application/json", "-H", "Accept: application/json",
          "--data", '{"title":"hello world"}']
+risk  = "unsafe"
 tokens = ["httpbin.org/anything", "post", "title", "hello world"]
 confidence = 0.81
 not_asked = ["join.2"]      # post は規則で決まっているので title はその続きになれない
@@ -231,6 +246,7 @@ not_asked = ["join.2"]      # post は規則で決まっているので title �
 words = ["post", "httpbin.org/anything", "title=hello", "world", "again"]
 argv  = ["curl", "-sS", "-X", "POST", "https://httpbin.org/anything", "-H", "Content-Type: application/json", "-H", "Accept: application/json",
          "--data", '{"title":"hello world again"}']
+risk  = "unsafe"
 tokens = ["post", "httpbin.org/anything", "title=hello world again"]
 [case.jev]
 "role.3" = { choice = "field_key", probs = { field_key = 0.5 } }
@@ -243,6 +259,7 @@ tokens = ["post", "httpbin.org/anything", "title=hello world again"]
 words = ["post", "localhost", "first_name", "job"]
 argv  = ["curl", "-sS", "-X", "POST", "http://localhost/", "-H", "Content-Type: application/json", "-H", "Accept: application/json",
          "--data", '{"first_name":"job"}']
+risk  = "unsafe"
 tokens = ["post", "localhost", "first_name", "job"]
 [case.jev]
 "role.2" = { choice = "field_key", probs = { field_key = 0.98 } }
@@ -269,6 +286,7 @@ argv  = ["curl", "-sS", "https://api.zippopotam.us/jp/100-0001"]
 words = ["jsonplaceholder.typicode.com/posts", "title", "hello", "body", "world", "userId", "1", "post"]
 argv  = ["curl", "-sS", "-X", "POST", "https://jsonplaceholder.typicode.com/posts", "-H", "Content-Type: application/json",
          "-H", "Accept: application/json", "--data", '{"title":"hello","body":"world","userId":1}']
+risk  = "unsafe"
 not_asked = ["get_intent", "role.7"]
 [case.jev]
 "role.1" = { choice = "field_key", probs = { field_key = 0.95 } }
