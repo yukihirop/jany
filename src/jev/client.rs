@@ -1,5 +1,5 @@
-//! OpenRouter の Decisions router: POST https://openrouter.ai/api/alpha/decisions
-//! (eg-jev `openrouter.ts` の decide() と同じ body / headers / 再試行)。
+//! OpenRouter's Decisions router: POST https://openrouter.ai/api/alpha/decisions
+//! (request body, headers, and retries on 429 / 5xx with exponential backoff).
 
 use super::{DecisionsRequest, DecisionsResponse, Oracle, Questions};
 use crate::error::JanyError;

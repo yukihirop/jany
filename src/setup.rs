@@ -1,5 +1,5 @@
-//! `jany --setup`: OpenRouter の API キーを ~/.config/jany/config.toml の [jev] api_key に 0600 で保存し、
-//! jev に 1 回テスト呼び出しして疎通を確かめる。
+//! `jany --setup`: saves the OpenRouter API key to [jev] api_key in ~/.config/jany/config.toml (mode 0600),
+//! after one test call to jev to check that it works.
 
 use crate::error::JanyError;
 use crate::jev::{self, Oracle};
@@ -36,7 +36,7 @@ pub fn run() -> Result<i32, JanyError> {
         return Err(JanyError::Usage("empty key, nothing saved".into()));
     }
 
-    // 疎通確認: 1 回だけ、最小の質問。
+    // Connectivity check: once, with the smallest possible question.
     let model = std::env::var("JEV_MODEL").unwrap_or_else(|_| jev::client::DEFAULT_MODEL.to_string());
     let oracle = jev::client::OpenRouter { api_key: key.clone(), model: model.clone(), timeout: Duration::from_secs(10), max_retries: 1 };
     let mut q = jev::Questions::new();
@@ -66,7 +66,7 @@ fn write_private(path: &std::path::Path, text: &str) -> std::io::Result<()> {
     use std::os::unix::fs::OpenOptionsExt;
     let mut f = std::fs::OpenOptions::new().write(true).create(true).truncate(true).mode(0o600).open(path)?;
     f.write_all(text.as_bytes())?;
-    // 既存ファイルだった場合も 0600 に揃える。
+    // Force 0600 even when the file already existed.
     std::fs::set_permissions(path, std::os::unix::fs::PermissionsExt::from_mode(0o600))
 }
 

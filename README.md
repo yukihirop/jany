@@ -65,7 +65,7 @@ jany generalises [jind](https://github.com/yukihirop/jind) (jev × find) and [ju
 - **jev** — anything left over goes to [jev](https://openrouter.ai) (TypeSafe System One, via OpenRouter) in **one request**: "what is the role of each word?" plus the extra questions the schema declares (which unit? at least or at most? a typo of which table word?). jev only picks from fixed choices and returns probabilities; it never generates the command.
 - **repair** — fixes what jev cannot see word by word: attach `days` to `7`, let `except` claim the names after it, pair `first_name amanda` into key and value.
 - **assemble.sh** — the command's own script (stdin JSON → stdout JSON) turns the role-tagged words into `argv`. It also says how risky the result is.
-- **output** — the line goes to stdout, everything else to stderr. Below a confidence floor jany prints nothing and exits non-zero. A `dangerous` result (find `-delete`) is previewed first with a read-only run. An `unsafe` one (curl `DELETE`, docker `--privileged`) gets a one-line note.
+- **output** — the line goes to stdout, everything else to stderr. When the words can't be turned into a command (unresolved, or below a confidence floor), jany exits non-zero and puts `jany <command> --hint` on the prompt instead, with the reason as a comment. A `dangerous` result (find `-delete`) is previewed first with a read-only run. An `unsafe` one (curl `DELETE`, docker `--privileged`) gets a one-line note.
 
 One jev call is 200–700 ms and under $0.0001.
 
@@ -133,7 +133,7 @@ The skill reads a reference of every schema key and the two worked examples (`fi
 ```toml
 [jev]
 model = "typesafe/jev-1.13"
-reject_below = 0.5           # below this, print nothing and exit non-zero
+reject_below = 0.5           # below this, no command: exit non-zero and offer `--hint`
 
 [cmd.curl.defaults]          # overrides the schema's [defaults]
 content_type = "text/plain"

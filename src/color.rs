@@ -1,4 +1,4 @@
-//! ANSI 色。出力先が端末で NO_COLOR が無いときだけ付ける。
+//! ANSI colours. Only when the output is a terminal and NO_COLOR is not set.
 
 use std::io::IsTerminal;
 
@@ -41,7 +41,7 @@ pub fn paint(on: bool, c: C, s: &str) -> String {
     }
 }
 
-/// confidence の帯で色を変える: ≥0.8 緑、≥0.5 黄、それ未満 赤。
+/// Colour by confidence band: ≥0.8 green, ≥0.5 yellow, below that red.
 pub fn conf(on: bool, v: f32) -> String {
     let s = format!("{v:.2}");
     let c = if v >= 0.8 { C::Green } else if v >= 0.5 { C::Yellow } else { C::Red };

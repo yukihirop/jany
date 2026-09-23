@@ -1,4 +1,4 @@
-//! stderr に出すもの: `--explain` の表、jev の 1 行、preview。stdout にはコマンドの 1 行だけ。
+//! What goes to stderr: the `--explain` table, the jev line, the preview. stdout gets only the one command line.
 
 use crate::color::{self, C, paint};
 use crate::jev::Usage;
@@ -71,7 +71,7 @@ impl JevInfo {
     }
 }
 
-/// `jany --setup` の上書き確認だけに使う y/N。
+/// y/N prompt, used only to confirm overwriting in `jany --setup`.
 pub fn confirm_no(prompt: &str) -> bool {
     if !std::io::stdin().is_terminal() {
         return false;
@@ -85,7 +85,16 @@ pub fn confirm_no(prompt: &str) -> bool {
     matches!(line.trim().to_ascii_lowercase().as_str(), "y" | "yes")
 }
 
-/// argv (+ pipe) を POSIX shell 用の 1 行に。
+/// Write to stdout. `print!` panics when the reader has gone away (`jany --list | head -1`);
+/// here a closed pipe ends the process quietly, and any other write error exits non-zero.
+pub fn stdout(s: &str) {
+    let mut out = std::io::stdout().lock();
+    if let Err(e) = out.write_all(s.as_bytes()).and_then(|_| out.flush()) {
+        std::process::exit(if e.kind() == std::io::ErrorKind::BrokenPipe { 0 } else { 1 });
+    }
+}
+
+/// argv (+ pipe) as one line for a POSIX shell.
 pub fn render(argv: &[String], pipe: Option<&[String]>) -> String {
     let mut s = shell_words::join(argv);
     if let Some(p) = pipe

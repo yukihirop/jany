@@ -1,12 +1,12 @@
-//! env + ~/.config/jany/config.toml。全部省略可。API キーは jind / jurl の設定からも借りる。
+//! env + ~/.config/jany/config.toml. Everything is optional. The API key is also borrowed from jind / jurl's config.
 //!
 //! ```toml
 //! [jev]
-//! api_key = "..."          # `jany --setup` が書く
+//! api_key = "..."          # written by `jany --setup`
 //! model = "typesafe/jev-1.13"
-//! reject_below = 0.5       # これ未満の解釈は stdout に出さない
+//! reject_below = 0.5       # interpretations below this are not printed to stdout
 //!
-//! [cmd.curl.defaults]      # schema の [defaults] を上書き
+//! [cmd.curl.defaults]      # overrides the schema's [defaults]
 //! content_type = "text/plain"
 //! ```
 
@@ -19,7 +19,7 @@ use std::path::PathBuf;
 #[serde(default)]
 pub struct Config {
     pub jev: Jev,
-    /// コマンド名 → 設定。
+    /// Command name → settings.
     pub cmd: BTreeMap<String, CmdConfig>,
 }
 
@@ -58,7 +58,7 @@ pub fn path() -> Option<PathBuf> {
     config_dir().map(|d| d.join("config.toml"))
 }
 
-/// コマンド定義の置き場。`JANY_CMD_DIR` があればそこ(開発中は `examples/` を指す)。
+/// Where command definitions live. `JANY_CMD_DIR` if set (points at `examples/` during development).
 pub fn cmd_dir() -> Option<PathBuf> {
     if let Ok(p) = std::env::var("JANY_CMD_DIR") {
         return Some(PathBuf::from(p));
@@ -83,7 +83,7 @@ pub fn load() -> Result<Config, JanyError> {
     Ok(cfg)
 }
 
-/// ~/.config/{jurl,jind}/config.toml の [jev] api_key(同じ OpenRouter の鍵)。
+/// [jev] api_key from ~/.config/{jurl,jind}/config.toml (the same OpenRouter key).
 fn borrowed_api_key() -> Option<String> {
     let home = std::env::var_os("HOME")?;
     for tool in ["jurl", "jind"] {
@@ -97,7 +97,7 @@ fn borrowed_api_key() -> Option<String> {
     None
 }
 
-/// aliases を展開し、値の中の `$VAR` を環境変数で置き換える。
+/// Expand aliases, replacing `$VAR` in their values with environment variables.
 pub fn expand_aliases(aliases: &BTreeMap<String, String>, words: &[String]) -> Vec<String> {
     words
         .iter()

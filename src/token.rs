@@ -1,4 +1,4 @@
-//! 語 1 つに付く情報。役割は schema の文字列(jind/jurl の enum をデータにしたもの)。
+//! What is attached to one word. Roles are the schema's strings (jind/jurl's enums turned into data).
 
 use serde::Serialize;
 use std::collections::BTreeMap;
@@ -10,12 +10,12 @@ pub enum Source {
     Jev,
 }
 
-/// 量。`+7d` は規則で全部決まる。`7` は jev が unit と向きを答える。
+/// An amount. `+7d` is fully decided by rules; for `7`, jev answers the unit and the direction.
 #[derive(Debug, Clone, PartialEq, Serialize)]
 pub struct Amount {
     pub n: f64,
     pub unit: Option<String>,
-    /// Some(true) = 以上、Some(false) = 以下、None = 未定。
+    /// Some(true) = at least, Some(false) = at most, None = undecided.
     pub at_least: Option<bool>,
 }
 
@@ -25,13 +25,13 @@ pub struct Token {
     pub role: Option<String>,
     pub confidence: f32,
     pub source: Source,
-    /// 補正後の値(`files` → `f`、`psot` → `POST`)。無ければ text。
+    /// The corrected value (`files` → `f`, `psot` → `POST`). text if none.
     pub fixed: Option<String>,
     pub amount: Option<Amount>,
     pub tags: Vec<String>,
-    /// `--explain` に出す一言。
+    /// A short note shown by `--explain`.
     pub note: Option<String>,
-    /// jev が返した役割ごとの確率(規則で決めたものは無し)。repair の根拠に使う。
+    /// jev's probability per role (none for words decided by rules). Used as evidence by repair.
     pub probs: Option<BTreeMap<String, f32>>,
 }
 
@@ -68,7 +68,7 @@ impl Token {
         }
     }
 
-    /// note の先頭に一言足す(`old → new (why); 以前の note`)。
+    /// Prepends a note (`old → new (why); previous note`).
     pub fn prepend_note(&mut self, s: String) {
         self.note = Some(match self.note.take() {
             Some(n) if !n.is_empty() => format!("{s}; {n}"),

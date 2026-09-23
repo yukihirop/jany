@@ -1,5 +1,5 @@
-//! `~/.config/jany/cmd/<name>[/<sub>]/schema.toml` の形。意味は docs/HOST.md。
-//! ここでは読むだけで解釈しない(解釈は rules / questions / repair)。
+//! The shape of `~/.config/jany/cmd/<name>[/<sub>]/schema.toml`. Meanings are in docs/HOST.md.
+//! This only reads it; interpretation lives in rules / questions / repair.
 
 use crate::error::JanyError;
 use regex::Regex;
@@ -31,7 +31,7 @@ pub struct Schema {
     #[serde(default)]
     pub confirm: Confirm,
 
-    /// 読み込んだディレクトリ(assemble.sh の場所)。
+    /// The directory it was loaded from (where assemble.sh is).
     #[serde(skip)]
     pub dir: PathBuf,
     #[serde(skip)]
@@ -50,15 +50,15 @@ pub struct Command {
 #[serde(deny_unknown_fields)]
 pub struct Role {
     pub key: String,
-    /// jev の Choice に見せる説明。無ければ規則でしか付かない役割。
+    /// Description shown in jev's Choice. Without it, only rules can assign the role.
     #[serde(default)]
     pub jev: Option<String>,
     #[serde(default)]
     pub table: Option<String>,
-    /// "time" | "size" | "count": この役割の語は amount を持つ。
+    /// "time" | "size" | "count": words with this role carry an amount.
     #[serde(default)]
     pub amount: Option<String>,
-    /// jev の state.tokens でこの文字列に置き換える(秘密を送らない)。
+    /// Replaced by this string in jev's state.tokens (so secrets are not sent).
     #[serde(default)]
     pub mask: Option<String>,
 }
@@ -68,7 +68,7 @@ pub struct Role {
 pub struct AmountSpec {
     #[serde(default)]
     pub ambiguous_suffixes: Vec<String>,
-    /// dimension → unit key → 語。
+    /// dimension → unit key → words.
     #[serde(default)]
     pub units: BTreeMap<String, BTreeMap<String, Vec<String>>>,
     #[serde(default)]
@@ -93,7 +93,7 @@ pub struct Rule {
     pub note: Option<String>,
     #[serde(default)]
     pub amount: Option<RuleAmount>,
-    /// "$upper" | "$lower" | "$1" | それ以外は文字通り。
+    /// "$upper" | "$lower" | "$1" | anything else is literal.
     #[serde(default)]
     pub fixed: Option<String>,
     #[serde(default)]
@@ -160,7 +160,7 @@ pub struct When {
 #[serde(deny_unknown_fields)]
 pub struct RuleAmount {
     pub n: f64,
-    /// 単位キー、または "$unit"(当たった単位語のキー)。
+    /// A unit key, or "$unit" (the key of the matched unit word).
     #[serde(default)]
     pub unit: Option<String>,
     #[serde(default)]
@@ -197,7 +197,7 @@ pub struct Question {
     pub none_conf: Option<f32>,
     #[serde(default)]
     pub sets: Option<Sets>,
-    /// "command" なら語ごとでなく 1 問。
+    /// "command" asks once instead of per word.
     #[serde(default)]
     pub scope: Option<String>,
 }
@@ -223,14 +223,14 @@ pub struct QWhen {
     pub regex: Option<String>,
     #[serde(default)]
     pub prev_any: Option<Vec<Cond>>,
-    // scope = "command" 用
+    // for scope = "command"
     #[serde(default)]
     pub no_role: Option<String>,
     #[serde(default)]
     pub any_unresolved: Option<bool>,
 }
 
-/// 語の状態に対する条件(prev_any / repair.join.into で使う)。
+/// A condition on a word's state (used by prev_any / repair.join.into).
 #[derive(Debug, Clone, Deserialize, Default)]
 #[serde(deny_unknown_fields)]
 pub struct Cond {
@@ -245,7 +245,7 @@ pub struct Cond {
     /// "rule" | "jev"
     #[serde(default)]
     pub source: Option<String>,
-    /// join: 前の語自身も join と答えられている。
+    /// join: the previous word was itself answered as join.
     #[serde(default)]
     pub chained: Option<bool>,
 }
@@ -269,7 +269,7 @@ pub struct StateSpec {
     pub value_of: String,
 }
 
-/// 役割の選択子: "path" か { role = "path", tag = "existing_dir" }。
+/// A role selector: "path" or { role = "path", tag = "existing_dir" }.
 #[derive(Debug, Clone, Deserialize)]
 #[serde(untagged)]
 pub enum Sel {
@@ -390,7 +390,7 @@ impl Schema {
         let p = dir.join("schema.toml");
         let text = std::fs::read_to_string(&p).map_err(|e| JanyError::Schema(format!("{}: {e}", p.display())))?;
         let mut s: Schema = toml::from_str(&text).map_err(|e| JanyError::Schema(format!("{}: {e}", p.display())))?;
-        // cases が chdir するので絶対パスに。
+        // Make it absolute, because cases chdir.
         s.dir = std::fs::canonicalize(dir).unwrap_or_else(|_| dir.to_path_buf());
         s.compile_regexes()?;
         s.validate()?;
@@ -416,7 +416,7 @@ impl Schema {
     }
 
     fn validate(&self) -> Result<(), JanyError> {
-        /// rules.rs の matches() が知っている builtin。
+        /// The builtins that matches() in rules.rs knows.
         const BUILTINS: &[&str] = &["path_like", "glob", "existing_dir", "amount", "unit_word"];
         let known: Vec<&str> = self.roles.iter().map(|r| r.key.as_str()).collect();
         for r in &self.rules {
@@ -445,7 +445,7 @@ impl Schema {
         self.roles.iter().find(|r| r.key == key)
     }
 
-    /// 表の (キー, 語) を順に。キー "_" は fixed 無し。
+    /// A table's (key, words) in order. Key "_" means no fixed value.
     pub fn table_entries(&self, name: &str) -> Vec<(String, Vec<String>)> {
         self.tables
             .get(name)
@@ -457,7 +457,7 @@ impl Schema {
             .unwrap_or_default()
     }
 
-    /// 表を引く(大文字小文字は区別しない)。当たれば (キー, fixed)。キー "_" なら fixed は None。
+    /// Looks a word up in a table (case-insensitive). On a hit, Some(fixed); fixed is None for key "_".
     pub fn table_lookup(&self, name: &str, w: &str) -> Option<Option<String>> {
         let lw = w.to_ascii_lowercase();
         for (k, syns) in self.table_entries(name) {
@@ -468,18 +468,18 @@ impl Schema {
         None
     }
 
-    /// 単位キーからその次元 ("time" / "size")。
+    /// The dimension of a unit key ("time" / "size").
     pub fn unit_dimension(&self, unit: &str) -> Option<String> {
         let a = self.amount.as_ref()?;
         a.units.iter().find(|(_, units)| units.contains_key(unit)).map(|(d, _)| d.clone())
     }
 
-    /// 全単位キー(次元の順)。
+    /// Every unit key (in dimension order).
     pub fn unit_keys(&self) -> Vec<String> {
         self.amount.as_ref().map(|a| a.units.values().flat_map(|u| u.keys().cloned()).collect()).unwrap_or_default()
     }
 
-    /// その次元の amount を持つ役割。
+    /// The role whose amount has that dimension.
     pub fn role_for_dimension(&self, dim: &str) -> Option<&str> {
         self.roles.iter().find(|r| r.amount.as_deref() == Some(dim)).map(|r| r.key.as_str())
     }
@@ -489,8 +489,8 @@ impl Schema {
     }
 }
 
-/// `jany <name> [<sub> ...]`: cmd_dir 以下で最も深く一致するディレクトリを探す。
-/// 返り値: (schema, 消費した語数)。
+/// `jany <name> [<sub> ...]`: finds the deepest matching directory under cmd_dir.
+/// Returns (schema, number of words consumed).
 pub fn resolve(cmd_dir: &Path, words: &[String]) -> Result<(Schema, usize), JanyError> {
     let Some(first) = words.first() else {
         return Err(JanyError::Usage("nothing to do. try: jany find log files older than 7 days".into()));
@@ -504,7 +504,7 @@ pub fn resolve(cmd_dir: &Path, words: &[String]) -> Result<(Schema, usize), Jany
     }
     let mut used = 1;
     for w in &words[1..] {
-        // サブコマンドは単純な名前だけ。"/var/log" や ".." を join すると別の場所を指す。
+        // Subcommands are plain names only. Joining "/var/log" or ".." would point somewhere else.
         if w.is_empty() || w.contains('/') || w.starts_with('.') {
             break;
         }

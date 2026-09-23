@@ -1,4 +1,4 @@
-//! 規則 → (jev) → repair → assemble の流れ。main と `jany --test` の両方から使う。
+//! The rules → (jev) → repair → assemble flow. Used by both main and `jany --test`.
 
 use crate::assemble::{self, Assembled};
 use crate::config::Config;
@@ -18,7 +18,7 @@ pub struct Run {
     pub out: Assembled,
 }
 
-/// `oracle` が None なら jev を呼ばない(未解決があれば Unresolved)。
+/// With `oracle` = None, jev is never called (any unresolved word is Unresolved).
 pub fn run(schema: &Schema, cfg: &Config, words: &[String], passthrough: &[String], oracle: Option<&dyn Oracle>, defaults_override: Option<&toml::Table>) -> Result<Run, JanyError> {
     let cmd_cfg = cfg.cmd.get(&schema.command.name).cloned().unwrap_or_default();
     let words = crate::config::expand_aliases(&cmd_cfg.aliases, words);

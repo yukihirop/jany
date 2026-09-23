@@ -1,11 +1,11 @@
-//! jev に渡す state / questions の組み立てと、answers の書き戻し。
-//! 候補はすべて schema の表。jev は候補から選ぶだけで、入力に無い値は作らない。
+//! Builds the state / questions sent to jev, and writes the answers back.
+//! Every candidate comes from the schema's tables. jev only picks among them and never makes up values that are not in the input.
 //!
-//! 質問キー:
-//!   role.i        jev = のある役割から 1 つ選ぶ(未解決の語ごと、常に)
-//!   <key>.i       [[questions]] の when が当たる語ごと
-//!   <key>         scope = "command" の質問(コマンドに 1 つ)
-//! `unit` と `atleast` は amount を持つ役割に対してホストが意味を知っている(書き戻し先が amount)。
+//! Question keys:
+//!   role.i        pick one of the roles that have jev = (for every unresolved word, always)
+//!   <key>.i       for every word where a [[questions]] when matches
+//!   <key>         a scope = "command" question (one per command)
+//! For roles with an amount, the host knows what `unit` and `atleast` mean (they are written back into the amount).
 
 use crate::amount;
 use crate::jev::{Answer, Answers, Question as JQ, Questions, choice, noul};
@@ -171,7 +171,7 @@ fn command_when(q: &Question, tokens: &[Token]) -> bool {
     true
 }
 
-/// 語が条件に合うか。`chained` は呼び手が判定して渡す(join のときだけ意味がある)。
+/// Whether a word meets the condition. The caller works out `chained` (it only matters for join).
 pub fn cond_ok(c: &Cond, t: &Token, chained: Option<bool>) -> bool {
     if let Some(want) = c.resolved
         && t.resolved() != want
@@ -210,8 +210,8 @@ pub fn cond_ok(c: &Cond, t: &Token, chained: Option<bool>) -> bool {
     true
 }
 
-/// answers をトークンに書き戻す。規則で決まっていた語は role を触らないが、
-/// amount の向き(`atleast`)は規則で決まった語にも書く(`a week`)。
+/// Writes the answers back into the tokens. Words decided by rules keep their role,
+/// but the amount's direction (`atleast`) is written even to them (`a week`).
 pub fn apply(schema: &Schema, tokens: &mut [Token], answers: &Answers) {
     for (i, t) in tokens.iter_mut().enumerate() {
         let was_resolved = t.resolved();
@@ -227,7 +227,7 @@ pub fn apply(schema: &Schema, tokens: &mut [Token], answers: &Answers) {
             t.note = Some(a.top2());
             t.probs = a.probabilities().cloned();
 
-            // 役割に表があれば語をそのまま引く。無ければ typo 質問(applies_to)の答えで補う。
+            // If the role has a table, look the word up as-is. Otherwise fall back to the typo question's answer (applies_to).
             if let Some(table) = schema.role(&role).and_then(|r| r.table.clone()) {
                 match schema.table_lookup(&table, &t.text) {
                     Some(fixed) => t.fixed = fixed,
@@ -237,7 +237,7 @@ pub fn apply(schema: &Schema, tokens: &mut [Token], answers: &Answers) {
                 apply_typo(schema, t, i, &role, None, answers);
             }
 
-            // amount を持つ役割: 数でない語なら組み立てられないので落とす。
+            // Roles with an amount: a word that is not a number cannot be assembled, so lower its confidence.
             if let Some(dim) = schema.role(&role).and_then(|r| r.amount.clone()) {
                 let Some(mut am) = t.amount.clone() else {
                     t.confidence = t.confidence.min(0.3);
@@ -256,7 +256,7 @@ pub fn apply(schema: &Schema, tokens: &mut [Token], answers: &Answers) {
                 }
                 t.amount = Some(am);
             } else if schema.amount.is_some() && t.is_unit_role(schema) {
-                // 単位の役割: fixed は単位キー。
+                // The unit role: fixed is the unit key.
                 match amount::unit_of_word(schema, &t.text) {
                     Some(u) => t.fixed = Some(u),
                     None => t.confidence = t.confidence.min(0.3),
@@ -264,7 +264,7 @@ pub fn apply(schema: &Schema, tokens: &mut [Token], answers: &Answers) {
             }
         }
 
-        // 向き(規則で決まった語にも)。
+        // Direction (also for words decided by rules).
         if let Some(mut am) = t.amount.clone()
             && am.at_least.is_none()
             && t.role.as_deref().and_then(|r| schema.role(r)).and_then(|r| r.amount.as_deref()).is_some_and(|d| d != "count")
@@ -278,7 +278,7 @@ pub fn apply(schema: &Schema, tokens: &mut [Token], answers: &Answers) {
             t.prepend_note(format!("{} p={p:.2}", if p > 0.5 { "at least" } else { "at most" }));
         }
 
-        // sets.tag (typed など): applies_to の役割で noul > 0.5 ならタグ。
+        // sets.tag (typed, etc.): tag the word if it has the applies_to role and noul > 0.5.
         for q in schema.questions.iter().filter(|q| q.sets.is_some()) {
             if q.applies_to.as_deref().is_some_and(|r| t.is(r))
                 && let Some(p) = answers.get(&format!("{}.{i}", q.key)).and_then(|a| a.noul())
@@ -290,7 +290,7 @@ pub fn apply(schema: &Schema, tokens: &mut [Token], answers: &Answers) {
     }
 }
 
-/// `applies_to = role` の choice 質問: 答えを fixed にする。none なら none_conf まで落とす。
+/// Choice questions with `applies_to = role`: the answer becomes fixed. On none, lower confidence to none_conf.
 fn apply_typo(schema: &Schema, t: &mut Token, i: usize, role: &str, table: Option<&str>, answers: &Answers) {
     for q in schema.questions.iter().filter(|q| q.kind == "choice" && q.applies_to.as_deref() == Some(role)) {
         let Some(a) = answers.get(&format!("{}.{i}", q.key)) else { continue };
@@ -301,7 +301,7 @@ fn apply_typo(schema: &Schema, t: &mut Token, i: usize, role: &str, table: Optio
                 }
             }
             Some(k) => {
-                // 答えは表の語。表があればキーに直す。
+                // The answer is a table word. If there is a table, turn it into the key.
                 let table = q.choices.as_deref().and_then(|c| c.strip_prefix("table:")).or(table);
                 let fixed = table.and_then(|tb| schema.table_lookup(tb, k)).flatten().unwrap_or_else(|| k.to_string());
                 t.fixed = Some(fixed);
@@ -314,12 +314,12 @@ fn apply_typo(schema: &Schema, t: &mut Token, i: usize, role: &str, table: Optio
 
 impl Token {
     fn is_unit_role(&self, schema: &Schema) -> bool {
-        // "unit" という役割名は慣習。schema の attach_unit.unit_role を見るのが正確だが、build 時には repair を見ないので名前で。
+        // Look for the unit role through the schema's attach_unit.unit_role (build and apply run before repair).
         schema.repair.iter().any(|r| matches!(r, crate::schema::Repair::AttachUnit { unit_role, .. } if self.is(unit_role)))
     }
 }
 
-/// テスト用: モックの答え(cases.toml 形式)を Answer に。
+/// For tests: a mock answer (cases.toml format) as an Answer.
 pub fn answer_from_toml(v: &toml::Value) -> Option<Answer> {
     let t = v.as_table()?;
     if let Some(p) = t.get("noul").and_then(|x| x.as_float().or_else(|| x.as_integer().map(|n| n as f64))) {

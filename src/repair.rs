@@ -1,8 +1,8 @@
-//! jev の答えは語ごとに独立なので、隣接関係はここで直す。プリミティブは 4 つ:
-//!   attach_unit  単位の語を直前の量に付ける(jind attach_units)
-//!   claim        マーカーの隣の語の役割を変える(jind mark_depth / mark_excludes)
-//!   join         jev が「前の語の続き」と言った語を前の語に結合する(jurl merge_joined)
-//!   pair         key value key value の交互配置を jev の確率で選ぶ(jurl pair_key_values)
+//! jev answers each word independently, so relations between neighbours are fixed here. Four primitives:
+//!   attach_unit  attach a unit word to the amount before it (jind attach_units)
+//!   claim        change the role of the word next to a marker (jind mark_depth / mark_excludes)
+//!   join         join a word jev called "a continuation of the previous word" onto it (jurl merge_joined)
+//!   pair         choose the key value key value alternation from jev's probabilities (jurl pair_key_values)
 
 use crate::jev::Answers;
 use crate::questions::cond_ok;
@@ -24,7 +24,7 @@ pub fn repair(schema: &Schema, tokens: &mut Vec<Token>, answers: &Answers) {
     }
 }
 
-/// `7 days` / `10 MB`: 単位の語は直前の量に付く。次元が jev の役割と食い違ったら単位(規則)が勝つ。
+/// `7 days` / `10 MB`: a unit word attaches to the amount before it. If its dimension disagrees with jev's role, the unit (a rule) wins.
 fn attach_unit(schema: &Schema, tokens: &mut [Token], unit_role: &str, amount_roles: &[String]) {
     for i in 1..tokens.len() {
         if !tokens[i].is(unit_role) {
@@ -43,7 +43,7 @@ fn attach_unit(schema: &Schema, tokens: &mut [Token], unit_role: &str, amount_ro
             prev.prepend_note(format!("{old} → {want} (unit says so)"));
             prev.role = Some(want);
             if prev.source == Source::Jev {
-                // 役割は単位で確定したので、jev の役割確率ではなく向きの確からしさだけが残る。
+                // The unit settled the role, so what remains is how sure the direction is, not jev's role probability.
                 prev.confidence = prev.confidence.max(0.8);
             }
         }
@@ -52,7 +52,7 @@ fn attach_unit(schema: &Schema, tokens: &mut [Token], unit_role: &str, amount_ro
     }
 }
 
-/// マーカーの隣(after / before / both = 後ろを先に)の語を role にする。many なら続く限り、skip の役割は跨ぐ。
+/// Gives `role` to the word next to a marker (after / before / both = after first). With many, as long as they continue; roles in skip are stepped over.
 #[allow(clippy::too_many_arguments)]
 fn claim(tokens: &mut [Token], marker: &str, role: &str, side: &str, many: bool, from: &[Sel], skip: &[String], amount_without_unit: bool, clear: &[String]) {
     let n = tokens.len();
@@ -62,7 +62,7 @@ fn claim(tokens: &mut [Token], marker: &str, role: &str, side: &str, many: bool,
         }
         from.iter().any(|s| {
             let c = s.cond();
-            // "unresolved" は role 無しの語。
+            // "unresolved" means a word without a role.
             if c.role.as_deref() == Some("unresolved") { !t.resolved() } else { cond_ok(&c, t, None) }
         })
     };
@@ -128,8 +128,8 @@ fn claim(tokens: &mut [Token], marker: &str, role: &str, side: &str, many: bool,
     }
 }
 
-/// jev が「前の語と同じ値の続き」(answer.i > 0.5)と言った語を前の語に結合する。後ろから見るので `a b c` も 1 つになる。
-/// cur は jev が決めた語であること。prev は `into` のどれかに合うこと。
+/// Joins words jev called "a continuation of the previous word's value" (answer.i > 0.5) onto the previous word. Scans from the back, so `a b c` also becomes one.
+/// cur must be a word jev decided; prev must match one of `into`.
 fn join(tokens: &mut Vec<Token>, answers: &Answers, answer: &str, sep: &str, into: &[crate::schema::Cond]) {
     let p_of = |i: usize| answers.get(&format!("{answer}.{i}")).and_then(|a| a.noul());
     let mut i = tokens.len();
@@ -149,7 +149,7 @@ fn join(tokens: &mut Vec<Token>, answers: &Answers, answer: &str, sep: &str, int
         prev.fixed = None;
         prev.tags.clear();
         prev.confidence = prev.confidence.min(p);
-        // pair は probs から confidence を引き直すので、「値である確率」にも join の p を反映しておく。
+        // pair recomputes confidence from probs, so carry join's p into the "is a value" probability too.
         if let Some(r) = prev.role.clone()
             && let Some(m) = prev.probs.as_mut()
         {
@@ -160,7 +160,7 @@ fn join(tokens: &mut Vec<Token>, answers: &Answers, answer: &str, sep: &str, int
     }
 }
 
-/// 連続する members の run ごとに「キー始まり」「値始まり」の尤度を比べ、良い方を採る。
+/// For each run of consecutive members, compare the likelihood of "starts with a key" and "starts with a value" and take the better.
 #[allow(clippy::too_many_arguments)]
 fn pair(tokens: &mut [Token], answers: &Answers, members: &[Sel], key_probs: &[String], value_probs: &[String], key_role: &str, value_role: &str, key_role_if: Option<&KeyRoleIf>) {
     let is_member = |t: &Token| members.iter().any(|s| cond_ok(&s.cond(), t, None));
@@ -182,7 +182,7 @@ fn pair(tokens: &mut [Token], answers: &Answers, members: &[Sel], key_probs: &[S
         }
         let key_role = key_role_if.filter(|k| k.any.iter().any(|c| pair_cond(c, tokens, &run, answers))).map(|k| k.role.as_str()).unwrap_or(key_role);
 
-        // 2 通りの配置の尤度。確率が無い(規則で決めた)語は 1.0 / 1e-3 として扱う。
+        // Likelihood of the two arrangements. Words without probabilities (decided by rules) count as 1.0 / 1e-3.
         let p = |t: &Token, key: bool| -> f32 {
             match &t.probs {
                 Some(m) => {
@@ -217,7 +217,7 @@ fn pair(tokens: &mut [Token], answers: &Answers, members: &[Sel], key_probs: &[S
             t.role = Some(new_role.to_string());
             if let Some(m) = &t.probs {
                 let role_p: f32 = if is_key { key_probs.iter().map(|r| m.get(r).copied().unwrap_or(0.0)).sum() } else { value_probs.iter().map(|r| m.get(r).copied().unwrap_or(0.0)).sum() };
-                // 配置で役割を変えた語は配置の確からしさ、変えていない語は min(役割 p, 配置)。
+                // A word whose role the arrangement changed gets the arrangement's confidence; an unchanged one gets min(role p, arrangement).
                 t.confidence = if switched { conf } else { role_p.min(conf) };
             }
         }

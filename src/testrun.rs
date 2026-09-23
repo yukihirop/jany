@@ -1,5 +1,5 @@
-//! `jany --test <command>`: cases.toml を Mock Oracle で回す。
-//! jev の答えは cases に書いたもの。聞かれていないキーに答えたら失敗(質問設計とフィクスチャのずれに気づくため)。
+//! `jany --test <command>`: runs cases.toml against a Mock Oracle.
+//! jev's answers are the ones written in the cases. Answering a key that was not asked fails (so drift between the questions and the fixture shows up).
 
 use crate::color::{self, C, paint};
 use crate::config::Config;
@@ -126,7 +126,7 @@ fn run_case(schema: &Schema, cfg: &Config, c: &Case, explain: bool) -> Vec<Strin
     let oracle: Option<&dyn Oracle> = if c.no_jev { None } else { Some(&mock) };
     let res = interpret::run(schema, cfg, &c.words, &c.passthrough, oracle, c.defaults.as_ref());
 
-    // 質問の検証(呼ばれていれば)。
+    // Check the questions (if jev was called).
     if let Some((state, qs)) = mock.seen.borrow().as_ref() {
         for k in &c.not_asked {
             if qs.contains_key(k) {
@@ -198,7 +198,7 @@ fn run_case(schema: &Schema, cfg: &Config, c: &Case, explain: bool) -> Vec<Strin
     fails
 }
 
-/// "hints.0" のようなドット区切りで state を引く。
+/// Looks up the state by a dotted path like "hints.0".
 fn lookup(v: &Value, path: &str) -> Value {
     let mut cur = v;
     for k in path.split('.') {
