@@ -102,7 +102,8 @@ fn run(args: Vec<String>) -> Result<i32, JanyError> {
             "--" => after = true,
             // The rest is a comment, e.g. from the retry line below when the shell's
             // interactive comments are off (zsh's default) and `#` arrives as a word.
-            "#" => break,
+            // Only after --hint, so a `#` the user typed as a word is kept.
+            "#" if opts.hint => break,
             "--explain" => opts.explain = true,
             "--no-jev" => opts.no_jev = true,
             "--hint" => opts.hint = true,
