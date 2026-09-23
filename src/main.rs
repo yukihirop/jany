@@ -4,6 +4,7 @@ mod color;
 mod complete;
 mod config;
 mod error;
+mod hint;
 mod init;
 mod interpret;
 mod jev;
@@ -24,10 +25,13 @@ const HELP: &str = "\
 jany — jev x any command. Turn loosely ordered words into a command line.
 
 usage: jany <command> [words ...] [flags] [-- passthrough args]
-       jany --init <zsh|bash|fish>   print the shell wrapper (eval \"$(jany --init zsh)\");
+       jany --init <zsh|bash|fish> [--locale en|ja]
+                                   print the shell wrapper (eval \"$(jany --init zsh)\");
                                    also installs the /jany-register skill to ~/.agents/skills
+                                   (in English, or Japanese with --locale ja)
                                    and the built-in commands (find, curl, docker run) to ~/.config/jany/cmd
-       jany --register <name> [sub]  scaffold ~/.config/jany/cmd/<name>/ (then: /jany-register <name>)
+       jany --register <name> [sub] [--locale en|ja]
+                                   scaffold ~/.config/jany/cmd/<name>/ (then: /jany-register <name>)
        jany --test <command> [sub]   run cases.toml of a command definition
        jany --setup                  save your OpenRouter API key
        jany --list                   show the command definitions found
@@ -40,6 +44,7 @@ wrapper from `jany --init` puts it on your prompt. Everything else goes to stder
 
 flags:
       --explain   show how each word was classified (stderr)
+      --hint      show what you can say to <command>, with examples from its cases.toml (stderr)
       --no-jev    never call jev; unresolved words are an error
   -h, --help
   -V, --version
@@ -57,6 +62,9 @@ env:
 struct Opts {
     explain: bool,
     no_jev: bool,
+    hint: bool,
+    /// --init / --register のスキルと雛形の言語。
+    locale: Option<skill::Locale>,
     /// jany 自身の操作(--init / --register / --test / --setup / --list)。<command> は常にツール名なのでフラグにしてある。
     action: Option<String>,
 }
@@ -84,7 +92,8 @@ fn run(args: Vec<String>) -> Result<i32, JanyError> {
     let mut words = Vec::new();
     let mut passthrough = Vec::new();
     let mut after = false;
-    for a in args {
+    let mut args = args.into_iter();
+    while let Some(a) = args.next() {
         if after {
             passthrough.push(a);
             continue;
@@ -93,6 +102,12 @@ fn run(args: Vec<String>) -> Result<i32, JanyError> {
             "--" => after = true,
             "--explain" => opts.explain = true,
             "--no-jev" => opts.no_jev = true,
+            "--hint" => opts.hint = true,
+            "--locale" => {
+                let v = args.next().ok_or_else(|| JanyError::Usage(format!("--locale needs a value ({})", skill::Locale::ALL.join(", "))))?;
+                opts.locale = Some(skill::Locale::parse(&v)?);
+            }
+            s if s.starts_with("--locale=") => opts.locale = Some(skill::Locale::parse(&s["--locale=".len()..])?),
             "--init" | "--register" | "--test" | "--setup" | "--list" => {
                 if let Some(prev) = &opts.action {
                     return Err(JanyError::Usage(format!("{prev} and {a} together")));
@@ -117,6 +132,10 @@ fn run(args: Vec<String>) -> Result<i32, JanyError> {
         print!("{HELP}");
         return Ok(0);
     }
+    if opts.locale.is_some() && !matches!(opts.action.as_deref(), Some("--init" | "--register")) {
+        return Err(JanyError::Usage("--locale only works with --init or --register".into()));
+    }
+    let locale = opts.locale.unwrap_or_default();
     let cmd_dir = config::cmd_dir().ok_or_else(|| JanyError::Config("cannot determine command dir (HOME unset)".into()))?;
 
     match opts.action.as_deref().unwrap_or("") {
@@ -125,7 +144,7 @@ fn run(args: Vec<String>) -> Result<i32, JanyError> {
             let shell = words.first().map(String::as_str).unwrap_or("");
             print!("{}", init::script(shell)?);
             // スキルも一緒に置く。失敗してもラッパーは出ているので警告だけ。
-            match skill::install() {
+            match skill::install(locale) {
                 Ok(changed) => {
                     for c in changed {
                         eprintln!("jany: installed {c}");
@@ -144,7 +163,7 @@ fn run(args: Vec<String>) -> Result<i32, JanyError> {
             }
             return Ok(0);
         }
-        "--register" => return skill::register(&cmd_dir, &words),
+        "--register" => return skill::register(&cmd_dir, &words, locale),
         "--test" => {
             let (schema, used) = schema::resolve(&cmd_dir, &words)?;
             if used != words.len() {
@@ -166,7 +185,19 @@ fn run(args: Vec<String>) -> Result<i32, JanyError> {
         _ => {}
     }
 
+    if opts.hint
+        && let Err(JanyError::NoCommand(..)) = schema::resolve(&cmd_dir, &words)
+        && let Some(subs) = hint::subcommands(&cmd_dir, &words)
+    {
+        // `jany docker --hint`: docker 自体に定義は無いので、下にある定義を案内する。
+        eprint!("{subs}");
+        return Ok(0);
+    }
     let (schema, used) = schema::resolve(&cmd_dir, &words)?;
+    if opts.hint {
+        // stdout は空のまま(ラッパーが入力行に何も載せない)。
+        return Ok(hint::run(&schema));
+    }
     let cfg = config::load()?;
     let on = color::stderr_enabled();
 

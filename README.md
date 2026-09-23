@@ -11,6 +11,10 @@
 </p>
 
 <p align="center">
+  <b>English</b> · <a href="README.ja.md">日本語</a>
+</p>
+
+<p align="center">
   <b>jany</b> turns a loose pile of words — out of order, half-remembered, misspelled — into the command line you meant, and puts it on your prompt. <b>It never runs it.</b> Enter is yours.
 </p>
 
@@ -77,7 +81,7 @@ echo 'eval "$(jany --init zsh)"' >> ~/.zshrc     # bash and fish too; bash is un
 printf '%s\n' "alias j='jany'" 'compdef _jany_complete j' >> ~/.zshrc
 ```
 
-`jany --init` does three things: prints the wrapper function, installs the built-in definitions (`find`, `curl`, `docker run`) into `~/.config/jany/cmd/`, and installs the `/jany-register` skill into `~/.agents/skills/` (linked from `~/.claude/skills/` and `~/.codex/skills/` when those exist). It never overwrites a definition you have edited.
+`jany --init` does three things: prints the wrapper function, installs the built-in definitions (`find`, `curl`, `docker run`) into `~/.config/jany/cmd/`, and installs the `/jany-register` skill into `~/.agents/skills/` (linked from `~/.claude/skills/` and `~/.codex/skills/` when those exist). It never overwrites a definition you have edited. The skill is in English by default; `jany --init zsh --locale ja` installs the Japanese one (put the flag in your rc line, since `--init` rewrites the skill on every shell start).
 
 `OPENROUTER_API_KEY` in the environment takes precedence; a key saved by `jind setup` or `jurl setup` is picked up too. Tested on macOS with zsh.
 
@@ -91,6 +95,7 @@ jany <command> [words ...] [flags] [-- passthrough args]
 |---|---|
 | `--explain` | per-word role, confidence, and whether a rule or jev decided it (stderr) |
 | `--no-jev` | offline only; unresolved words are an error |
+| `--hint` | what you can say to `<command>` (its roles) and examples from its `cases.toml` (stderr) |
 | `-- …` | passed through untouched (what that means is up to the command: find options, curl flags, the container command for docker run) |
 
 jany's own actions are flags, so `<command>` is always the tool's name:
@@ -100,7 +105,7 @@ jany's own actions are flags, so `<command>` is always the tool's name:
 | `jany --list` | the definitions found, with an example each |
 | `jany --test find` | run a definition's `cases.toml` (jev answers are mocked) |
 | `/jany-register tar` | create and fill `~/.config/jany/cmd/tar/` with the agent skill |
-| `jany --init zsh\|bash\|fish` | the wrapper, plus built-ins and the skill |
+| `jany --init zsh\|bash\|fish` | the wrapper, plus built-ins and the skill (`--locale en\|ja`, default `en`) |
 | `jany --setup` | save the API key |
 
 ## Adding a command
@@ -145,4 +150,4 @@ dl = "~/Downloads"
 
 ---
 
-<p align="center"><sub>Sister projects: <a href="https://github.com/yukihirop/jind">jind</a> (jev × find) and <a href="https://github.com/yukihirop/jurl">jurl</a> (jev × curl) — jany is their generalisation. <code>examples/</code> holds the built-in definitions and <code>docs/HOST.md</code> the line between what the host does and what a schema does. Each module in <code>src/</code> starts with a comment on what it does. <code>docs/demo.svg</code> is real output captured through a pty by <code>docs/capture-demo.py</code> and rendered by <code>docs/make-demo.py</code>. The jev wire format follows eg-jev's <code>packages/recipes/src/lib/{openrouter,questions}.ts</code>.</sub></p>
+<p align="center"><sub>Sister projects: <a href="https://github.com/yukihirop/jind">jind</a> (jev × find) and <a href="https://github.com/yukihirop/jurl">jurl</a> (jev × curl) — jany is their generalisation. <code>examples/</code> holds the built-in definitions and <code>docs/HOST.md</code> the line between what the host does and what a schema does. Each module in <code>src/</code> starts with a comment on what it does. <code>docs/demo.svg</code> is real output captured through a pty by <code>docs/capture-demo.py</code> and rendered by <code>docs/make-demo.py</code>.</sub></p>

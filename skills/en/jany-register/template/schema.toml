@@ -1,0 +1,59 @@
+# jany schema: __NAME__
+# Keys are explained in ~/.agents/skills/jany-register/reference.md. Worked examples: examples/find, examples/curl.
+# Unknown keys are an error.
+
+[command]
+name = "__NAME__"
+description = """__NAME__: turns loosely ordered command words into one `__NAME__` command. \
+Words may be misspelled, split, or out of order."""
+example = ""
+
+# Roles. Only roles with jev = "..." are choices for jev (English, with concrete examples). Keep it to 10–20.
+[[roles]]
+key = "passthrough"
+
+# [[roles]]
+# key = "path"
+# jev = "A file or directory path (src, /var/log, ./a.txt)"
+
+# Word → corrected value tables. Key "_" means no correction. Case-insensitive.
+# [tables.actions]
+# _ = ["ls", "print"]
+
+# Tried top to bottom; the first matching rule wins. Decide every unambiguous word here (jev is not called).
+[[rules]]
+match = { prefix = "-", min_len = 2 }
+role  = "passthrough"
+note  = "raw flag"
+
+# [[rules]]
+# match = { builtin = "path_like" }
+# role  = "path"
+
+# What to ask jev about words the rules could not decide. role.i is asked automatically.
+# [[questions]]
+# key  = "typo"
+# kind = "choice"
+# when = { resolved = false, alphabetic = true, max_len = 20 }
+# ask  = "If `tokens[{i}]` (\"{w}\") is a misspelled action word, which one was intended?"
+# choices = "table:actions"
+# none = "Not an action"
+# applies_to = "action"
+# none_conf = 0.3
+
+# Adjacency fixes. attach_unit / claim / join / pair
+# [[repair]]
+# op = "claim"
+# marker = "except"
+# role = "exclude"
+# from = ["path", "unresolved"]
+
+[assemble]
+script = "assemble.sh"
+
+[defaults]
+args = []
+
+[confirm]
+preview_readonly = false
+preview_lines = 10

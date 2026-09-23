@@ -35,7 +35,9 @@ pub fn run(cmd_dir: &Path, typed: &[String]) -> i32 {
         .filter(|w| !w.starts_with('-'))
         .cloned()
         .collect();
+    // 打ちかけがフラグ(`find --h`)なら、それが prefix なので上書きしない。
     if !typed_words.is_empty()
+        && !prefix.starts_with('-')
         && crate::schema::resolve(cmd_dir, &typed_words)
             .map(|(_, used)| used == typed_words.len())
             .unwrap_or(false)
@@ -52,10 +54,29 @@ pub fn run(cmd_dir: &Path, typed: &[String]) -> i32 {
         .find(|w| w.starts_with("--"))
         .map(String::as_str)
     {
+        Some("--locale") => {
+            // `--locale en` の後にはもう出さない。
+            if context.last().map(String::as_str) != Some("--locale") {
+                return print(out);
+            }
+            for (l, d) in [("en", "English skill"), ("ja", "Japanese skill")] {
+                if l.starts_with(prefix) {
+                    out.push((l.into(), d.into()));
+                }
+            }
+            return print(out);
+        }
         Some("--init") => {
-            for s in ["zsh", "bash", "fish"] {
+            // シェルを打った後は --locale だけ。
+            let shell_given = context.last().is_some_and(|w| !w.starts_with('-'));
+            let cands: &[(&str, &str)] = if shell_given {
+                &[("--locale", "language of the /jany-register skill (en, ja)")]
+            } else {
+                &[("zsh", "shell wrapper"), ("bash", "shell wrapper"), ("fish", "shell wrapper")]
+            };
+            for (s, d) in cands {
                 if s.starts_with(prefix) {
-                    out.push((s.into(), "shell wrapper".into()));
+                    out.push((s.to_string(), d.to_string()));
                 }
             }
             return print(out);
@@ -193,6 +214,7 @@ pub fn run(cmd_dir: &Path, typed: &[String]) -> i32 {
     for (f, d) in [
         ("--explain", "show how each word was classified"),
         ("--no-jev", "offline only"),
+        ("--hint", "what you can say, with examples"),
         ("--", "pass the rest through untouched"),
     ] {
         if f.starts_with(prefix) {
