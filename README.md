@@ -87,6 +87,8 @@ In zsh the wrapper also shows a dim hint of what you can still say after `jany <
 
 `[cmd.<name>] autorun = true` in `~/.config/jany/config.toml` lets the zsh wrapper run the line instead of putting it on the prompt, but only when the rules decided every word and the definition calls it risk `"none"`: no jev, no words after `--`, no raw `-x` flags, no preview or pipe. `jany <command> -- --help` and `-- --version` with nothing else also run. `autorun_also = ["pnpm install"]` lets lines that start with those words run even when the definition calls them `"unsafe"` (compared word by word on the final argv, so `jany pnpm install react`, which becomes `pnpm add react`, does not match; `"dangerous"` never runs). The line is shown on stderr and still goes into your history. Anything else goes on the prompt as before. Off by default, and bash / fish always put the line on the prompt.
 
+`jany --on` (zsh only) lets you leave out `jany` in that shell until `jany --off`: on Enter, a line that starts with a command jany has a definition for and says something after it goes through jany, so `find empty folders` puts `find . -type d -empty` on the next prompt, and `jany find empty folders` is what stays in the history. A line with a word starting with `-` (`find . -name x`), a pipe, a list or a redirection runs as typed, and so does the command alone (`find`) or a subcommand jany has no definition for (`docker ps`). `command find …` or `\find …` always runs as typed. The dim hint shows for these lines too.
+
 `OPENROUTER_API_KEY` in the environment takes precedence; a key saved by `jind setup` or `jurl setup` is picked up too. Tested on macOS with zsh.
 
 ## Usage
@@ -111,6 +113,7 @@ jany's own actions are flags, so `<command>` is always the tool's name:
 | `/jany-register tar` | create and fill `~/.config/jany/cmd/tar/` with the agent skill |
 | `jany --update` | after upgrading jany: replace the built-ins you have not edited, list what the others lack, and install the skills that are missing |
 | `/jany-update tar` | add only what a definition lacks, with the agent skill; existing rules and cases stay |
+| `jany --on` / `jany --off` | in this zsh, type `find empty folders` without `jany` (needs the wrapper) |
 | `jany --init zsh\|bash\|fish` | the wrapper, plus built-ins and the skill (`--locale en\|ja`, default `en`) |
 | `jany --setup` | save the API key |
 

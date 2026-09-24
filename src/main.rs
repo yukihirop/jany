@@ -1,5 +1,6 @@
 mod amount;
 mod assemble;
+mod claim;
 mod color;
 mod complete;
 mod config;
@@ -42,6 +43,9 @@ usage: jany <command> [words ...] [flags] [-- passthrough args]
        jany --list                   show the command definitions found
        jany --complete -- [words]    print shell completion candidates
        jany --suggest -- [words]     print the dim hint for the words still to say (zsh)
+       jany --on | --off             in this zsh, type `find log files older than 7 days` without `jany`
+                                   (lines with a `-` word, a pipe or a redirection run as typed)
+       jany --claim -- [words]       exit 0 if jany would take the line after `jany --on` (zsh)
 
 jany's own actions are flags so that <command> is always the tool's name.
 
@@ -106,6 +110,17 @@ fn run(args: Vec<String>) -> Result<i32, JanyError> {
         let typed = args.iter().position(|a| a == "--").map(|i| &args[i + 1..]).unwrap_or(&[]);
         let cmd_dir = config::cmd_dir().ok_or_else(|| JanyError::Config("cannot determine command dir (HOME unset)".into()))?;
         return Ok(suggest::run(&cmd_dir, typed));
+    }
+    if args.first().map(String::as_str) == Some("--claim") {
+        let typed = args.iter().position(|a| a == "--").map(|i| &args[i + 1..]).unwrap_or(&[]);
+        let cmd_dir = config::cmd_dir().ok_or_else(|| JanyError::Config("cannot determine command dir (HOME unset)".into()))?;
+        return Ok(claim::run(&cmd_dir, typed));
+    }
+    // The zsh wrapper handles these itself; they reach here only without it (or from bash / fish).
+    if let [a] = args.as_slice()
+        && (a == "--on" || a == "--off")
+    {
+        return Err(JanyError::Usage(format!("jany {a} works in zsh with the wrapper: put eval \"$(jany --init zsh)\" in ~/.zshrc and open a new shell")));
     }
     let mut opts = Opts::default();
     let mut words = Vec::new();
