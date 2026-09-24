@@ -3,17 +3,18 @@
 //! Rules and repair only: jev is never called, so it is fast and free on every keystroke.
 
 use crate::jev::Answers;
-use crate::{config, output, repair, rules, schema};
+use crate::{claim, config, output, repair, rules, schema};
 use std::path::Path;
 
-pub fn run(cmd_dir: &Path, typed: &[String]) -> i32 {
-    if let Some(line) = line(cmd_dir, typed) {
+/// `on`: the line has no `jany` in front (after `jany --on`), so a line that `[on] skip` runs as typed gets no hint.
+pub fn run(cmd_dir: &Path, typed: &[String], on: bool) -> i32 {
+    if let Some(line) = line(cmd_dir, typed, on) {
         output::stdout(&format!("{line}\n"));
     }
     0
 }
 
-fn line(cmd_dir: &Path, typed: &[String]) -> Option<String> {
+fn line(cmd_dir: &Path, typed: &[String], on: bool) -> Option<String> {
     // Words after `--` are passed through as-is; there is nothing left to hint.
     if typed.iter().any(|w| w == "--") {
         return None;
@@ -21,7 +22,7 @@ fn line(cmd_dir: &Path, typed: &[String]) -> Option<String> {
     // jany's own flags (--explain, --no-jev) are not words of the command.
     let words: Vec<String> = typed.iter().filter(|w| !w.starts_with("--")).cloned().collect();
     let cfg = config::load().ok();
-    if cfg.as_ref().is_some_and(|c| !c.suggest.enabled) {
+    if cfg.as_ref().is_some_and(|c| !c.suggest.enabled || (on && claim::skipped(&words, &c.on.skip))) {
         return None;
     }
     let (schema, used) = schema::resolve(cmd_dir, &words).ok()?;

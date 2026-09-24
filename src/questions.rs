@@ -133,7 +133,7 @@ fn token_when(schema: &Schema, q: &Question, tokens: &[Token], i: usize) -> bool
         return false;
     }
     if let Some(true) = c.alphabetic
-        && !(!t.text.is_empty() && t.text.chars().all(|ch| ch.is_ascii_alphabetic()))
+        && (t.text.is_empty() || !t.text.chars().all(|ch| ch.is_ascii_alphabetic()))
     {
         return false;
     }

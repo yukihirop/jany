@@ -16,6 +16,16 @@ pub fn script(shell: &str) -> Result<&'static str, JanyError> {
 const ZSH: &str = r#"# jany: put the assembled command on the next prompt instead of running it (or run it: [cmd.<name>] autorun)
 jany() {
   local __jany_a __jany_cmd __jany_status
+  # `jany --on` / `--off`: only this shell changes, so the wrapper keeps the switch (see _jany_accept_line)
+  if (( $# == 1 )) && [[ $1 == --on ]]; then
+    typeset -g _JANY_ON=1
+    print -u2 -r -- 'jany: lines starting with a command jany knows (jany --list) go through jany; a line with a `-` word, a pipe or a redirection runs as typed (jany --off to stop)'
+    return 0
+  elif (( $# == 1 )) && [[ $1 == --off ]]; then
+    unset _JANY_ON
+    print -u2 -r -- 'jany: stopped; type jany in front again'
+    return 0
+  fi
   # jany's own actions (--list, --init, --test, ...) print for reading, not for the prompt
   for __jany_a in "$@"; do
     case "$__jany_a" in
@@ -82,14 +92,16 @@ fi
 # in config.toml turns it off; JANY_SUGGEST=0/1 overrides that per shell (0 is checked here to skip starting jany).
 typeset -g _jany_suggest_buf="" _jany_suggest_text="" _jany_suggest_hl=""
 _jany_suggest() {
-  local __jany_s=""
+  local __jany_s="" __jany_on=""
   local -a reply
   if [[ ${JANY_SUGGEST:-1} != 0 && $BUFFER == *" " && $CURSOR -eq ${#BUFFER} ]]; then
-    if _jany_words "$BUFFER"; then
+    # after `jany --on`, `find src ` gets the hint too, unless it has a `-` word and so runs as typed
+    # (`--on` tells jany to leave out the lines `[on] skip` lets run as typed)
+    if _jany_words "$BUFFER" || { [[ -n $_JANY_ON ]] && reply=("${(@Q)${(z)BUFFER}}") && [[ -z ${(M)reply:#-*} ]] && __jany_on=--on }; then
       # redraws come often; ask jany only when the line changed
       if [[ $BUFFER != "$_jany_suggest_buf" ]]; then
         _jany_suggest_buf=$BUFFER
-        _jany_suggest_text="$(command jany --suggest -- "${reply[@]}" 2>/dev/null)"
+        _jany_suggest_text="$(command jany --suggest $__jany_on -- "${reply[@]}" 2>/dev/null)"
       fi
       __jany_s=$_jany_suggest_text
     fi
@@ -114,6 +126,32 @@ if [[ -o interactive ]] && autoload -Uz add-zle-hook-widget 2>/dev/null; then
   add-zle-hook-widget line-pre-redraw _jany_suggest
   add-zle-hook-widget line-finish _jany_suggest_clear
 fi
+
+# after `jany --on`: on Enter, a line jany takes (`jany --claim` decides) gets `jany ` in front, so
+# `find log files older than 7 days` goes through the wrapper above and keeps `jany find …` in the history.
+# `command find …` or `\find …` always runs as typed.
+_jany_accept_line() {
+  local -a __jany_r __jany_w
+  if [[ -n $_JANY_ON ]]; then
+    __jany_r=(${(z)BUFFER})
+    __jany_w=("${(@Q)__jany_r}")
+    # a quoted first word (`\find`, `'find'`) means "the command itself", like `command find`
+    if [[ ${__jany_r[1]} == "${__jany_w[1]}" && ${__jany_w[1]} != jany ]] && ! _jany_words "$BUFFER" \
+      && command jany --claim -- "${__jany_w[@]}" 2>/dev/null; then
+      BUFFER="jany $BUFFER"
+    fi
+  fi
+  # keep what accept-line was before (another plugin may have wrapped it)
+  if (( $+widgets[_jany_accept_line_orig] )); then
+    zle _jany_accept_line_orig -- "$@"
+  else
+    zle .accept-line -- "$@"
+  fi
+}
+if [[ -o interactive ]] && (( ! $+widgets[_jany_accept_line_orig] )); then
+  [[ ${widgets[accept-line]} == user:* ]] && zle -A accept-line _jany_accept_line_orig
+  zle -N accept-line _jany_accept_line
+fi
 "#;
 
 /// bash cannot touch the input line from a child process, so bind the command to the key sequence `\e[0n`
@@ -124,7 +162,7 @@ jany() {
   for __jany_a in "$@"; do
     case "$__jany_a" in
       --) break ;;
-      --init|--list|--test|--register|--update|--setup|-h|--help|-V|--version) command jany "$@"; return $? ;;
+      --init|--list|--test|--register|--update|--setup|--on|--off|-h|--help|-V|--version) command jany "$@"; return $? ;;
     esac
   done
   __jany_cmd="$(command jany "$@")"
@@ -156,7 +194,7 @@ function jany
         switch $a
             case --
                 break
-            case --init --list --test --register --update --setup -h --help -V --version
+            case --init --list --test --register --update --setup --on --off -h --help -V --version
                 command jany $argv
                 return $status
         end

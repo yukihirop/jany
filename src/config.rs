@@ -9,6 +9,9 @@
 //! [suggest]
 //! enabled = false          # no dim hint in zsh (JANY_SUGGEST=0/1 overrides it per shell)
 //!
+//! [on]
+//! skip = ["kubectl", "docker compose"]   # after `jany --on`, lines starting with these words run as typed
+//!
 //! [cmd.curl.defaults]      # overrides the schema's [defaults]
 //! content_type = "text/plain"
 //!
@@ -28,6 +31,7 @@ use std::path::PathBuf;
 pub struct Config {
     pub jev: Jev,
     pub suggest: Suggest,
+    pub on: On,
     /// Command name → settings.
     pub cmd: BTreeMap<String, CmdConfig>,
 }
@@ -47,6 +51,14 @@ pub struct Jev {
 #[serde(default)]
 pub struct Suggest {
     pub enabled: bool,
+}
+
+/// `jany --on` in zsh (`jany --claim`).
+#[derive(Debug, Clone, Default, Deserialize)]
+#[serde(default)]
+pub struct On {
+    /// Lines starting with these words (compared word by word) run as typed, e.g. "kubectl" or "docker compose".
+    pub skip: Vec<String>,
 }
 
 #[derive(Debug, Clone, Default, Deserialize)]
