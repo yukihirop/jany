@@ -92,15 +92,16 @@ fi
 # in config.toml turns it off; JANY_SUGGEST=0/1 overrides that per shell (0 is checked here to skip starting jany).
 typeset -g _jany_suggest_buf="" _jany_suggest_text="" _jany_suggest_hl=""
 _jany_suggest() {
-  local __jany_s=""
+  local __jany_s="" __jany_on=""
   local -a reply
   if [[ ${JANY_SUGGEST:-1} != 0 && $BUFFER == *" " && $CURSOR -eq ${#BUFFER} ]]; then
     # after `jany --on`, `find src ` gets the hint too, unless it has a `-` word and so runs as typed
-    if _jany_words "$BUFFER" || { [[ -n $_JANY_ON ]] && reply=("${(@Q)${(z)BUFFER}}") && [[ -z ${(M)reply:#-*} ]] }; then
+    # (`--on` tells jany to leave out the lines `[on] skip` lets run as typed)
+    if _jany_words "$BUFFER" || { [[ -n $_JANY_ON ]] && reply=("${(@Q)${(z)BUFFER}}") && [[ -z ${(M)reply:#-*} ]] && __jany_on=--on }; then
       # redraws come often; ask jany only when the line changed
       if [[ $BUFFER != "$_jany_suggest_buf" ]]; then
         _jany_suggest_buf=$BUFFER
-        _jany_suggest_text="$(command jany --suggest -- "${reply[@]}" 2>/dev/null)"
+        _jany_suggest_text="$(command jany --suggest $__jany_on -- "${reply[@]}" 2>/dev/null)"
       fi
       __jany_s=$_jany_suggest_text
     fi

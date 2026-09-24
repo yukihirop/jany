@@ -1,12 +1,24 @@
 //! `jany --claim -- <typed words…>`: after `jany --on`, the zsh wrapper asks this on Enter for every line.
 //! Exit 0 means jany takes the line (the wrapper puts `jany ` in front of it), 1 means the shell runs it as typed.
-//! It only looks at the words and the definition directories: no config, no jev, so it is cheap on every Enter.
+//! It only looks at the words, `[on] skip` in config.toml and the definition directories (never jev),
+//! so it is cheap on every Enter.
 
-use crate::schema;
+use crate::{config, schema};
 use std::path::Path;
 
 pub fn run(cmd_dir: &Path, typed: &[String]) -> i32 {
-    if takes(cmd_dir, typed) { 0 } else { 1 }
+    // A broken config.toml should not stop the shell from running lines: treat it as no skip list.
+    let skip = config::load().map(|c| c.on.skip).unwrap_or_default();
+    if !skipped(typed, &skip) && takes(cmd_dir, typed) { 0 } else { 1 }
+}
+
+/// `[on] skip`: the line starts with one of these, word by word (`kubectl` skips `kubectl get pods`,
+/// `docker compose` skips `docker compose up` but not `docker run nginx`).
+pub fn skipped(typed: &[String], skip: &[String]) -> bool {
+    skip.iter().any(|s| {
+        let s: Vec<&str> = s.split_whitespace().collect();
+        !s.is_empty() && typed.len() >= s.len() && typed.iter().zip(&s).all(|(t, s)| t == s)
+    })
 }
 
 /// jany takes a line when it starts with a command it has a definition for (`find`, `docker run`) and says
@@ -74,6 +86,17 @@ mod tests {
             "diff <(find a) b",
         ] {
             assert!(!takes(&examples(), &words(line)), "{line}");
+        }
+    }
+
+    #[test]
+    fn skip_list_matches_whole_words_from_the_start() {
+        let skip = vec!["kubectl".to_string(), "docker compose".to_string(), " ".to_string()];
+        for line in ["kubectl get pods", "docker compose up", "kubectl"] {
+            assert!(skipped(&words(line), &skip), "{line}");
+        }
+        for line in ["docker run nginx", "kubectlx get", "find empty folders", "docker", "pnpm kubectl"] {
+            assert!(!skipped(&words(line), &skip), "{line}");
         }
     }
 
