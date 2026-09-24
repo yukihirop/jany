@@ -72,28 +72,13 @@ One jev call is 200–700 ms and under $0.0001.
 ## Setup
 
 ```sh
-cargo install jany          # after the crates.io release
-# Before the release, install from this checkout:
-cargo install --path .
-jany --setup                  # store your OpenRouter API key in ~/.config/jany/config.toml (0600)
-echo 'eval "$(jany --init zsh)"' >> ~/.zshrc     # bash and fish too; bash is untested
-# optional: aliases get the same completion and hint (zsh), also ones that name a command
-printf '%s\n' "alias j='jany'" "alias jpnpm='j pnpm'" >> ~/.zshrc
+cargo install jany
+jany --skills      # installs the agent skills (--locale ja for Japanese)
 ```
 
-`jany --init` does three things: prints the wrapper function, installs the built-in definitions (`find`, `curl`, `docker run`) into `~/.config/jany/cmd/`, and installs the `/jany-register` and `/jany-update` skills into `~/.agents/skills/` (linked from `~/.claude/skills/` and `~/.codex/skills/` when those exist). It never overwrites a definition that is already there. The skills are in English by default; `jany --init zsh --locale ja` installs the Japanese one (put the flag in your rc line, since `--init` rewrites the skill on every shell start).
+Then run `/jany-setup` in Claude Code or Codex. It asks which shell you use, writes the `jany --init` line to its rc, and in zsh asks whether to turn on `jany --on`.
 
-In zsh the wrapper also shows a dim hint of what you can still say after `jany <command> ` (the definition's `[[placeholders]]`), e.g. `jany find src ` → `<file|dir> <*.log> <older than N days> <delete|count>`. It never calls jev. `[suggest] enabled = false` in `~/.config/jany/config.toml` turns it off; `JANY_SUGGEST=0` / `1` overrides that for one shell. bash and fish don't have it.
-
-`[cmd.<name>] autorun = true` in `~/.config/jany/config.toml` lets the zsh wrapper run the line instead of putting it on the prompt, but only when the rules decided every word and the definition calls it risk `"none"`: no jev, no words after `--`, no raw `-x` flags, no preview or pipe. `jany <command> -- --help` and `-- --version` with nothing else also run. `autorun_also = ["pnpm install"]` lets lines that start with those words run even when the definition calls them `"unsafe"` (compared word by word on the final argv, so `jany pnpm install react`, which becomes `pnpm add react`, does not match; `"dangerous"` never runs). The line is shown on stderr and still goes into your history. Anything else goes on the prompt as before. Off by default, and bash / fish always put the line on the prompt.
-
-`jany --on` (zsh only) lets you leave out `jany` in that shell until `jany --off`: on Enter, a line that starts with a command jany has a definition for and says something after it goes through jany, so `find empty folders` puts `find . -type d -empty` on the next prompt, and `jany find empty folders` is what stays in the history. A line with a word starting with `-` (`find . -name x`), a pipe, a list or a redirection runs as typed, and so does the command alone (`find`) or a subcommand jany has no definition for (`docker ps`). `command find …` or `\find …` always runs as typed. `[on] skip = ["kubectl", "docker compose"]` in `~/.config/jany/config.toml` keeps lines starting with those words (compared word by word) as typed, and gives them no dim hint. The dim hint shows for the other lines too.
-
-<p align="center">
-  <img src="docs/on.svg" alt="Flow after jany --on: Enter on a line without jany → jany takes it? (jany --claim, no jev). yes: jany is put in front, which is what stays in history → jany (rules → jev → assemble) → your prompt, or it runs right away with autorun when safe. no (a - word, a pipe or redirection, the command alone, no definition, a quoted first word, [on] skip): the line runs as typed." width="880">
-</p>
-
-`OPENROUTER_API_KEY` in the environment takes precedence; a key saved by `jind setup` or `jurl setup` is picked up too. Tested on macOS with zsh.
+To set it up by hand, and for the dim hint, autorun, `jany --on` and the API key, see [docs/setup.md](docs/setup.md). To stop using jany, `/jany-teardown` removes what it put in place.
 
 ## Usage
 
@@ -101,77 +86,16 @@ In zsh the wrapper also shows a dim hint of what you can still say after `jany <
 jany <command> [words ...] [flags] [-- passthrough args]
 ```
 
-| flag | |
-|---|---|
-| `--explain` | per-word role, confidence, and whether a rule or jev decided it (stderr) |
-| `--no-jev` | offline only; unresolved words are an error |
-| `--hint` | what you can say to `<command>` (its roles) and examples from its `cases.toml` (stderr) |
-| `-- …` | passed through untouched (what that means is up to the command: find options, curl flags, the container command for docker run) |
-
-jany's own actions are flags, so `<command>` is always the tool's name:
-
-| | |
-|---|---|
-| `jany --list` | the definitions found, with an example each |
-| `jany --test find` | run a definition's `cases.toml` (jev answers are mocked) |
-| `/jany-register tar` | create and fill `~/.config/jany/cmd/tar/` with the agent skill |
-| `jany --update` | after upgrading jany: replace the built-ins you have not edited, list what the others lack, and install the skills that are missing |
-| `/jany-update tar` | add only what a definition lacks, with the agent skill; existing rules and cases stay |
-| `jany --on` / `jany --off` | in this zsh, type `find empty folders` without `jany` (needs the wrapper) |
-| `jany --init zsh\|bash\|fish` | the wrapper, plus built-ins and the skill (`--locale en\|ja`, default `en`) |
-| `jany --setup` | save the API key |
+`--explain` shows how each word was decided, `--hint` what you can say to a command, and words after `--` are passed through untouched. All the flags, jany's own actions (`--list`, `--test`, `--update`, `--on` …) and `config.toml` are in [docs/usage.md](docs/usage.md).
 
 ## Adding a command
 
 ```sh
-jany --register tar           # optional: scaffold only, without the skill
 /jany-register tar            # in Claude Code or Codex: create, fill, and test the definition
-jany --test tar
+jany --update                 # after upgrading jany (then /jany-update <name> for the ones it lists)
 ```
 
-A definition lives in `~/.config/jany/cmd/<name>[/<sub>]/`:
-
-| file | |
-|---|---|
-| `schema.toml` | roles (what jev may choose from), word tables, rules, questions for jev, repair steps, risk settings |
-| `assemble.sh` | role-tagged tokens in, `{argv, preview, risk, pipe, error}` out; any language, bash + jq is enough |
-| `cases.toml` | words → expected argv, with jev's answers written down; `jany --test` refuses answers to questions jany did not ask |
-
-The skill reads a reference of every schema key and the two worked examples (`find`, `curl`) before writing. The rule of thumb from jind and jurl carries over: cover the 80 % you actually type, pass the rest through after `--`, and do not trust an `assemble.sh` that has no cases.
-
-## Updating definitions
-
-A new jany can bring new definition features (such as `[[placeholders]]`) and updated built-ins, but `jany --init` never touches a definition that is already in place. After upgrading, run:
-
-```sh
-jany --update                 # built-ins you have not edited are replaced; the rest are listed
-/jany-update tar              # in Claude Code or Codex: add what tar lacks, then jany --test tar
-```
-
-`jany --update` knows a built-in is unedited when every file matches a version jany has shipped (`examples/released.txt`). An edited built-in is left alone and listed, like your own definitions; `/jany-update` merges the new parts into it and keeps your edits. `jany --update` also installs `/jany-update` itself when it is missing (in the language of the installed `/jany-register`, or `--locale en|ja`); skill files already there are left alone.
-
-## Config (optional)
-
-`~/.config/jany/config.toml`
-
-```toml
-[jev]
-model = "typesafe/jev-1.13"
-reject_below = 0.5           # below this, no command: exit non-zero and offer `--hint`
-
-[suggest]
-enabled = false              # no dim hint in zsh (JANY_SUGGEST=0/1 overrides it)
-
-[cmd.curl.defaults]          # overrides the schema's [defaults]
-content_type = "text/plain"
-
-[cmd.find.aliases]
-dl = "~/Downloads"
-
-[cmd.pnpm]
-autorun = true               # zsh: run rule-only, risk "none" lines right away
-autorun_also = ["pnpm install"]   # ...and these, even when "unsafe"
-```
+A command is a directory of three files in `~/.config/jany/cmd/<name>/`. What goes in them, and how updating works: [docs/commands.md](docs/commands.md).
 
 ## Where it is weak
 
