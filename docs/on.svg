@@ -1,0 +1,75 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="920" height="270" viewBox="0 0 920 270" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="13">
+  <defs>
+    <marker id="a" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M0,0 L10,5 L0,10 z" fill="#66706e"/>
+    </marker>
+  </defs>
+  <style>
+    .box{fill:#ffffff;stroke:#d9ded9;stroke-width:1.2}
+    .jany{stroke:#3b6fd1;stroke-width:2}
+    .t{fill:#1b1f1e}
+    .m{fill:#66706e;font-size:11px}
+    .l{stroke:#66706e;stroke-width:1.6;fill:none}
+    @media (prefers-color-scheme: dark){
+      .box{fill:#181d24;stroke:#2c3648}
+      .jany{stroke:#7aa2f7}
+      .t{fill:#e6eaef}
+      .m{fill:#9aa3b2}
+    }
+  </style>
+
+  <text class="m" x="16" y="22">after `jany --on` in zsh, you press Enter on a line without `jany`</text>
+
+  <rect class="box" x="16" y="40" width="130" height="44" rx="8"/>
+  <text class="t" x="81" y="60" text-anchor="middle">Enter</text>
+  <text class="m" x="81" y="76" text-anchor="middle">find empty folders</text>
+
+  <path class="l" d="M146,62 L168,62" marker-end="url(#a)"/>
+
+  <rect class="box" x="168" y="40" width="150" height="44" rx="8"/>
+  <text class="t" x="243" y="60" text-anchor="middle">jany takes it?</text>
+  <text class="m" x="243" y="76" text-anchor="middle">jany --claim · no jev</text>
+
+  <!-- yes: rewrite the line -->
+  <path class="l" d="M318,62 L346,62" marker-end="url(#a)"/>
+  <text class="m" x="332" y="54" text-anchor="middle">yes</text>
+
+  <rect class="box" x="346" y="40" width="196" height="44" rx="8"/>
+  <text class="t" x="444" y="60" text-anchor="middle">jany find empty folders</text>
+  <text class="m" x="444" y="76" text-anchor="middle">`jany ` added · in history</text>
+
+  <path class="l" d="M542,62 L564,62" marker-end="url(#a)"/>
+
+  <rect class="box jany" x="564" y="40" width="156" height="44" rx="8"/>
+  <text class="t" x="642" y="60" text-anchor="middle">jany</text>
+  <text class="m" x="642" y="76" text-anchor="middle">rules → jev → assemble</text>
+
+  <path class="l" d="M720,62 L742,62" marker-end="url(#a)"/>
+
+  <rect class="box" x="742" y="40" width="152" height="44" rx="8"/>
+  <text class="t" x="818" y="60" text-anchor="middle">your prompt</text>
+  <text class="m" x="818" y="76" text-anchor="middle">find . -type d -empty</text>
+
+  <!-- autorun: run instead of placing -->
+  <path class="l" d="M642,84 L642,130" marker-end="url(#a)"/>
+  <text class="m" x="650" y="112">[cmd.&lt;name&gt;] autorun</text>
+
+  <rect class="box" x="564" y="130" width="156" height="44" rx="8"/>
+  <text class="t" x="642" y="150" text-anchor="middle">runs right away</text>
+  <text class="m" x="642" y="166" text-anchor="middle">only if safe (exit 3)</text>
+
+  <!-- no: the shell runs the line itself -->
+  <path class="l" d="M243,84 L243,130" marker-end="url(#a)"/>
+  <text class="m" x="251" y="112">no</text>
+
+  <rect class="box" x="168" y="130" width="150" height="44" rx="8"/>
+  <text class="t" x="243" y="150" text-anchor="middle">runs as typed</text>
+  <text class="m" x="243" y="166" text-anchor="middle">jany is not involved</text>
+
+  <text class="m" x="168" y="198">no when:</text>
+  <text class="m" x="232" y="198">a word starts with - (find . -name x) · | &amp;&amp; ; &gt; 2&gt;</text>
+  <text class="m" x="232" y="214">the command alone (find) · no definition (docker ps)</text>
+  <text class="m" x="232" y="230">the first word is quoted (\find, command find) · [on] skip</text>
+
+  <text class="m" x="16" y="258">jany --off stops it · only this shell · the blue box is the flow above</text>
+</svg>
