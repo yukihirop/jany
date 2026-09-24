@@ -29,7 +29,8 @@ jany — jev x any command. Turn loosely ordered words into a command line.
 usage: jany <command> [words ...] [flags] [-- passthrough args]
        jany --init <zsh|bash|fish> [--locale en|ja]
                                    print the shell wrapper (eval \"$(jany --init zsh)\");
-                                   also installs the /jany-setup, /jany-register and /jany-update skills to ~/.agents/skills
+                                   also installs the /jany-setup, /jany-register, /jany-update and /jany-teardown skills
+                                   to ~/.agents/skills
                                    (in English, or Japanese with --locale ja)
                                    and the built-in commands (find, curl, docker run) to ~/.config/jany/cmd
        jany --skills [--locale en|ja]  only install the skills (before the first --init: then /jany-setup)

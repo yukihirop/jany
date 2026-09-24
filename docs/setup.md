@@ -12,7 +12,7 @@ echo 'eval "$(jany --init zsh)"' >> ~/.zshrc     # bash and fish too; bash is un
 printf '%s\n' "alias j='jany'" "alias jpnpm='j pnpm'" >> ~/.zshrc
 ```
 
-`jany --init` does three things: prints the wrapper function, installs the built-in definitions (`find`, `curl`, `docker run`) into `~/.config/jany/cmd/`, and installs the `/jany-setup`, `/jany-register` and `/jany-update` skills into `~/.agents/skills/` (linked from `~/.claude/skills/` and `~/.codex/skills/` when those exist). It never overwrites a definition that is already there. The skills are in English by default; `jany --init zsh --locale ja` installs the Japanese one (put the flag in your rc line, since `--init` rewrites the skill on every shell start).
+`jany --init` does three things: prints the wrapper function, installs the built-in definitions (`find`, `curl`, `docker run`) into `~/.config/jany/cmd/`, and installs the `/jany-setup`, `/jany-register`, `/jany-update` and `/jany-teardown` skills into `~/.agents/skills/` (linked from `~/.claude/skills/` and `~/.codex/skills/` when those exist). It never overwrites a definition that is already there. The skills are in English by default; `jany --init zsh --locale ja` installs the Japanese one (put the flag in your rc line, since `--init` rewrites the skill on every shell start).
 
 `jany --skills` installs only the skills, for `/jany-setup` before the first `--init`. `/jany-setup` never reads your API key; without one it asks you to run `jany --setup`.
 
@@ -35,3 +35,7 @@ In zsh the wrapper also shows a dim hint of what you can still say after `jany <
 ## API key
 
 `OPENROUTER_API_KEY` in the environment takes precedence; a key saved by `jind setup` or `jurl setup` is picked up too. Tested on macOS with zsh.
+
+## Stopping jany
+
+`/jany-teardown` in Claude Code or Codex removes what jany put in place: the rc lines (the `jany --init` and `jany --on` lines, aliases and `compdef` pointing at jany), the skills and their symlinks, `~/.config/jany/` and the binary. It asks what to remove, shows the list before removing anything, and by default moves `~/.config/jany/` (your own definitions, the API key) to `~/jany-backup-<date>/` instead of deleting it.

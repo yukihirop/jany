@@ -1,6 +1,6 @@
-//! Ships the `/jany-setup`, `/jany-register` and `/jany-update` skills, the `jany --register <name>` scaffold,
+//! Ships the `/jany-setup`, `/jany-register`, `/jany-update` and `/jany-teardown` skills, the `jany --register <name>` scaffold,
 //! and `jany --update`, which brings the built-in definitions up to date.
-//! The skills (`skills/<locale>/jany-{setup,register,update}/`, en / ja) are embedded in the binary and written on every
+//! The skills (`skills/<locale>/jany-{setup,register,update,teardown}/`, en / ja) are embedded in the binary and written on every
 //! `jany --init` (and by `jany --skills`, before the first `--init`) to `~/.agents/skills/`
 //! (a place both Claude Code and Codex can read).
 
@@ -27,7 +27,7 @@ impl Locale {
     }
 }
 
-/// The skills for one language (`skills/<locale>/jany-{setup,register,update}/`).
+/// The skills for one language (`skills/<locale>/jany-{setup,register,update,teardown}/`).
 /// Paths are relative to the skills root (`~/.agents/skills/`).
 macro_rules! skill_files {
     ($l:literal) => {
@@ -39,6 +39,7 @@ macro_rules! skill_files {
             ("jany-register/template/cases.toml", include_str!(concat!("../skills/", $l, "/jany-register/template/cases.toml"))),
             ("jany-update/SKILL.md", include_str!(concat!("../skills/", $l, "/jany-update/SKILL.md"))),
             ("jany-setup/SKILL.md", include_str!(concat!("../skills/", $l, "/jany-setup/SKILL.md"))),
+            ("jany-teardown/SKILL.md", include_str!(concat!("../skills/", $l, "/jany-teardown/SKILL.md"))),
         ]
     };
 }
@@ -105,7 +106,7 @@ pub fn install_commands(cmd_dir: &Path) -> Result<Vec<String>, JanyError> {
 }
 
 /// The names of the shipped skills, each a directory under the skills root.
-const SKILLS: &[&str] = &["jany-register", "jany-update", "jany-setup"];
+const SKILLS: &[&str] = &["jany-register", "jany-update", "jany-setup", "jany-teardown"];
 
 /// `JANY_SKILL_DIR`, or else `~/.agents/skills/jany-register`.
 pub fn skill_dir() -> Option<PathBuf> {

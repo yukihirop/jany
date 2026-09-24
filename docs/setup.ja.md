@@ -12,7 +12,7 @@ echo 'eval "$(jany --init zsh --locale ja)"' >> ~/.zshrc     # bash と fish も
 printf '%s\n' "alias j='jany'" "alias jpnpm='j pnpm'" >> ~/.zshrc
 ```
 
-`jany --init` は 3 つのことをする: ラッパー関数を出力する、組み込みの定義(`find`、`curl`、`docker run`)を `~/.config/jany/cmd/` に置く、`/jany-setup`、`/jany-register`、`/jany-update` のスキルを `~/.agents/skills/` に置く(`~/.claude/skills/` と `~/.codex/skills/` があればそこからリンクする)。すでにある定義は上書きしない。スキルは既定で英語版。日本語版は `--locale ja` で置く。`--init` はシェルを開くたびにスキルを書き直すので、フラグは rc の行に書いておく(上の例のように)。
+`jany --init` は 3 つのことをする: ラッパー関数を出力する、組み込みの定義(`find`、`curl`、`docker run`)を `~/.config/jany/cmd/` に置く、`/jany-setup`、`/jany-register`、`/jany-update`、`/jany-teardown` のスキルを `~/.agents/skills/` に置く(`~/.claude/skills/` と `~/.codex/skills/` があればそこからリンクする)。すでにある定義は上書きしない。スキルは既定で英語版。日本語版は `--locale ja` で置く。`--init` はシェルを開くたびにスキルを書き直すので、フラグは rc の行に書いておく(上の例のように)。
 
 `jany --skills` はスキルだけを置く。最初の `--init` の前に `/jany-setup` を使うためのもの。`/jany-setup` は API キーを読まない。無ければ `jany --setup` を打つよう言う。
 
@@ -35,3 +35,7 @@ zsh では、`jany <command> ` の後ろに、まだ言えることを薄く出�
 ## API キー
 
 環境変数の `OPENROUTER_API_KEY` が優先される。`jind setup` や `jurl setup` で保存したキーも拾う。macOS の zsh で確認している。
+
+## jany をやめる
+
+Claude Code か Codex で `/jany-teardown` を呼ぶと、jany が置いたものを片付ける: rc の行(`jany --init` と `jany --on` の行、jany を指す alias と `compdef`)、スキルとその symlink、`~/.config/jany/`、バイナリ。何を消すかを聞き、消す前に一覧を見せる。`~/.config/jany/`(自分で書いた定義、API キー)は、既定では消さずに `~/jany-backup-<日付>/` に移す。

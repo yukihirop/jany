@@ -78,7 +78,7 @@ jany --skills      # installs the agent skills (--locale ja for Japanese)
 
 Then run `/jany-setup` in Claude Code or Codex. It asks which shell you use, writes the `jany --init` line to its rc, and in zsh asks whether to turn on `jany --on`.
 
-To set it up by hand, and for the dim hint, autorun, `jany --on` and the API key, see [docs/setup.md](docs/setup.md).
+To set it up by hand, and for the dim hint, autorun, `jany --on` and the API key, see [docs/setup.md](docs/setup.md). To stop using jany, `/jany-teardown` removes what it put in place.
 
 ## Usage
 
@@ -86,78 +86,16 @@ To set it up by hand, and for the dim hint, autorun, `jany --on` and the API key
 jany <command> [words ...] [flags] [-- passthrough args]
 ```
 
-| flag | |
-|---|---|
-| `--explain` | per-word role, confidence, and whether a rule or jev decided it (stderr) |
-| `--no-jev` | offline only; unresolved words are an error |
-| `--hint` | what you can say to `<command>` (its roles) and examples from its `cases.toml` (stderr) |
-| `-- …` | passed through untouched (what that means is up to the command: find options, curl flags, the container command for docker run) |
-
-jany's own actions are flags, so `<command>` is always the tool's name:
-
-| | |
-|---|---|
-| `jany --list` | the definitions found, with an example each |
-| `jany --test find` | run a definition's `cases.toml` (jev answers are mocked) |
-| `/jany-register tar` | create and fill `~/.config/jany/cmd/tar/` with the agent skill |
-| `jany --update` | after upgrading jany: replace the built-ins you have not edited, list what the others lack, and install the skills that are missing |
-| `/jany-update tar` | add only what a definition lacks, with the agent skill; existing rules and cases stay |
-| `jany --on` / `jany --off` | in this zsh, type `find empty folders` without `jany` (needs the wrapper) |
-| `jany --skills` | only the skills, before the first `--init` (then `/jany-setup`) |
-| `jany --init zsh\|bash\|fish` | the wrapper, plus built-ins and the skill (`--locale en\|ja`, default `en`) |
-| `jany --setup` | save the API key |
+`--explain` shows how each word was decided, `--hint` what you can say to a command, and words after `--` are passed through untouched. All the flags, jany's own actions (`--list`, `--test`, `--update`, `--on` …) and `config.toml` are in [docs/usage.md](docs/usage.md).
 
 ## Adding a command
 
 ```sh
-jany --register tar           # optional: scaffold only, without the skill
 /jany-register tar            # in Claude Code or Codex: create, fill, and test the definition
-jany --test tar
+jany --update                 # after upgrading jany (then /jany-update <name> for the ones it lists)
 ```
 
-A definition lives in `~/.config/jany/cmd/<name>[/<sub>]/`:
-
-| file | |
-|---|---|
-| `schema.toml` | roles (what jev may choose from), word tables, rules, questions for jev, repair steps, risk settings |
-| `assemble.sh` | role-tagged tokens in, `{argv, preview, risk, pipe, error}` out; any language, bash + jq is enough |
-| `cases.toml` | words → expected argv, with jev's answers written down; `jany --test` refuses answers to questions jany did not ask |
-
-The skill reads a reference of every schema key and the two worked examples (`find`, `curl`) before writing. The rule of thumb from jind and jurl carries over: cover the 80 % you actually type, pass the rest through after `--`, and do not trust an `assemble.sh` that has no cases.
-
-## Updating definitions
-
-A new jany can bring new definition features (such as `[[placeholders]]`) and updated built-ins, but `jany --init` never touches a definition that is already in place. After upgrading, run:
-
-```sh
-jany --update                 # built-ins you have not edited are replaced; the rest are listed
-/jany-update tar              # in Claude Code or Codex: add what tar lacks, then jany --test tar
-```
-
-`jany --update` knows a built-in is unedited when every file matches a version jany has shipped (`examples/released.txt`). An edited built-in is left alone and listed, like your own definitions; `/jany-update` merges the new parts into it and keeps your edits. `jany --update` also installs `/jany-update` itself when it is missing (in the language of the installed `/jany-register`, or `--locale en|ja`); skill files already there are left alone.
-
-## Config (optional)
-
-`~/.config/jany/config.toml`
-
-```toml
-[jev]
-model = "typesafe/jev-1.13"
-reject_below = 0.5           # below this, no command: exit non-zero and offer `--hint`
-
-[suggest]
-enabled = false              # no dim hint in zsh (JANY_SUGGEST=0/1 overrides it)
-
-[cmd.curl.defaults]          # overrides the schema's [defaults]
-content_type = "text/plain"
-
-[cmd.find.aliases]
-dl = "~/Downloads"
-
-[cmd.pnpm]
-autorun = true               # zsh: run rule-only, risk "none" lines right away
-autorun_also = ["pnpm install"]   # ...and these, even when "unsafe"
-```
+A command is a directory of three files in `~/.config/jany/cmd/<name>/`. What goes in them, and how updating works: [docs/commands.md](docs/commands.md).
 
 ## Where it is weak
 

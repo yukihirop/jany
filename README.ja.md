@@ -78,7 +78,7 @@ jany --skills --locale ja      # エージェント用のスキルを置く
 
 あとは Claude Code か Codex で `/jany-setup` を呼ぶ。どのシェルで使うかを聞いて、その rc に `jany --init` の行を書き、zsh なら `jany --on` にするかも聞く。
 
-手で設定するとき、薄い候補・autorun・`jany --on`・API キーのことは [docs/setup.ja.md](docs/setup.ja.md) にある。
+手で設定するとき、薄い候補・autorun・`jany --on`・API キーのことは [docs/setup.ja.md](docs/setup.ja.md) にある。jany をやめるときは `/jany-teardown` が置いたものを片付ける。
 
 ## 使い方
 
@@ -86,78 +86,16 @@ jany --skills --locale ja      # エージェント用のスキルを置く
 jany <command> [words ...] [flags] [-- passthrough args]
 ```
 
-| フラグ | |
-|---|---|
-| `--explain` | 語ごとの役割、確信度、規則と jev のどちらが決めたか(stderr) |
-| `--no-jev` | オフラインのみ。決まらない語はエラー |
-| `--hint` | `<command>` に何が言えるか(役割)と、その `cases.toml` から取った例(stderr) |
-| `-- …` | そのまま素通し(意味はコマンド次第: find のオプション、curl のフラグ、docker run ならコンテナ内のコマンド) |
-
-jany 自身の操作はフラグなので、`<command>` は常にツール名になる:
-
-| | |
-|---|---|
-| `jany --list` | 見つかった定義と、それぞれの例 |
-| `jany --test find` | 定義の `cases.toml` を回す(jev の答えはモック) |
-| `/jany-register tar` | エージェントのスキルで `~/.config/jany/cmd/tar/` を作って埋める |
-| `jany --update` | jany を上げた後に: 手を入れていない組み込み定義を置き換え、他の定義に足りないものを一覧し、無いスキルを置く |
-| `/jany-update tar` | エージェントのスキルで、定義に足りないものだけを足す。既存の規則と cases はそのまま |
-| `jany --on` / `jany --off` | この zsh で、`jany` を付けずに `find empty folders` と打てる(ラッパーが要る) |
-| `jany --skills` | 最初の `--init` の前に、スキルだけを置く(次に `/jany-setup`) |
-| `jany --init zsh\|bash\|fish` | ラッパーと、組み込み定義とスキル(`--locale en\|ja`、既定は `en`) |
-| `jany --setup` | API キーを保存する |
+`--explain` で語ごとにどう決まったか、`--hint` でそのコマンドに何が言えるかを出す。`--` の後ろはそのまま素通し。フラグの全部、jany 自身の操作(`--list`、`--test`、`--update`、`--on` など)、`config.toml` は [docs/usage.ja.md](docs/usage.ja.md) にある。
 
 ## コマンドを足す
 
 ```sh
-jany --register tar           # 任意: 雛形だけ置く(スキルは使わない)
-/jany-register tar            # Claude Code か Codex で: 定義を作り、埋めて、テストする
-jany --test tar
+/jany-register tar            # Claude Code か Codex で: 定義を作って埋め、テストまで通す
+jany --update                 # jany を上げた後に(一覧に出た定義は /jany-update <name>)
 ```
 
-定義は `~/.config/jany/cmd/<name>[/<sub>]/` に置く:
-
-| ファイル | |
-|---|---|
-| `schema.toml` | 役割(jev が選べるもの)、語の表、規則、jev への質問、repair の手順、危険度の設定 |
-| `assemble.sh` | 役割の付いたトークンを受け取り、`{argv, preview, risk, pipe, error}` を返す。言語は問わない。bash + jq で足りる |
-| `cases.toml` | 語 → 期待する argv と、書き下した jev の答え。jany が聞いていない質問への答えは `jany --test` が受け付けない |
-
-スキルは書く前に、schema の全キーのリファレンスと 2 つの実例(`find`、`curl`)を読む。jind と jurl の経験則はそのまま使える: 実際に打つ 8 割を載せ、残りは `--` の後ろで素通しし、cases の無い `assemble.sh` は信用しない。
-
-## 定義を新しくする
-
-新しい jany では定義の機能(`[[placeholders]]` など)や組み込み定義が増えることがある。ただし `jany --init` は、すでにある定義には触らない。jany を上げたら次を実行する:
-
-```sh
-jany --update                 # 手を入れていない組み込み定義は置き換わり、残りは一覧に出る
-/jany-update tar              # Claude Code か Codex で: tar に足りないものを足し、jany --test tar まで回す
-```
-
-組み込み定義に手が入っていないかは、全ファイルが jany の出した版のどれかと一致するかで判断する(`examples/released.txt`)。編集済みの組み込み定義はそのまま残し、あなたの定義と同じく一覧に出す。`/jany-update` は、あなたの編集を残したまま新しい部分を取り込む。`/jany-update` スキル自体が無ければ `jany --update` が置く(言語は置いてある `/jany-register` に合わせる。`--locale en|ja` でも選べる)。すでにあるスキルのファイルは触らない。
-
-## 設定(任意)
-
-`~/.config/jany/config.toml`
-
-```toml
-[jev]
-model = "typesafe/jev-1.13"
-reject_below = 0.5           # これ未満ならコマンドを出さず、非ゼロで終わって --hint を勧める
-
-[suggest]
-enabled = false              # zsh の薄い候補を出さない(JANY_SUGGEST=0/1 で上書き)
-
-[cmd.curl.defaults]          # schema の [defaults] を上書きする
-content_type = "text/plain"
-
-[cmd.find.aliases]
-dl = "~/Downloads"
-
-[cmd.pnpm]
-autorun = true               # zsh: 規則だけで決まった risk "none" の行はすぐ実行する
-autorun_also = ["pnpm install"]   # この語で始まる行は "unsafe" でも実行する
-```
+コマンドは `~/.config/jany/cmd/<name>/` にある 3 ファイルのディレクトリ。中身と、新しくするやり方は [docs/commands.ja.md](docs/commands.ja.md) にある。
 
 ## 弱いところ
 
