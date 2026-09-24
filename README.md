@@ -89,6 +89,10 @@ In zsh the wrapper also shows a dim hint of what you can still say after `jany <
 
 `jany --on` (zsh only) lets you leave out `jany` in that shell until `jany --off`: on Enter, a line that starts with a command jany has a definition for and says something after it goes through jany, so `find empty folders` puts `find . -type d -empty` on the next prompt, and `jany find empty folders` is what stays in the history. A line with a word starting with `-` (`find . -name x`), a pipe, a list or a redirection runs as typed, and so does the command alone (`find`) or a subcommand jany has no definition for (`docker ps`). `command find …` or `\find …` always runs as typed. `[on] skip = ["kubectl", "docker compose"]` in `~/.config/jany/config.toml` keeps lines starting with those words (compared word by word) as typed, and gives them no dim hint. The dim hint shows for the other lines too.
 
+<p align="center">
+  <img src="docs/on.svg" alt="Flow after jany --on: Enter on a line without jany → jany takes it? (jany --claim, no jev). yes: jany is put in front, which is what stays in history → jany (rules → jev → assemble) → your prompt, or it runs right away with autorun when safe. no (a - word, a pipe or redirection, the command alone, no definition, a quoted first word, [on] skip): the line runs as typed." width="880">
+</p>
+
 `OPENROUTER_API_KEY` in the environment takes precedence; a key saved by `jind setup` or `jurl setup` is picked up too. Tested on macOS with zsh.
 
 ## Usage
