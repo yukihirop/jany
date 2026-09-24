@@ -72,28 +72,13 @@ jev の呼び出しは 1 回 200〜700 ms、$0.0001 未満。
 ## セットアップ
 
 ```sh
-cargo install jany          # crates.io に出た後
-# 出る前は、このチェックアウトから入れる:
-cargo install --path .
-jany --setup                  # OpenRouter の API キーを ~/.config/jany/config.toml(0600)に保存
-echo 'eval "$(jany --init zsh --locale ja)"' >> ~/.zshrc     # bash と fish もある。bash は未検証
-# 任意: エイリアスにも同じ補完と薄い候補が付く(zsh)。コマンド名まで含めたものでもよい
-printf '%s\n' "alias j='jany'" "alias jpnpm='j pnpm'" >> ~/.zshrc
+cargo install jany
+jany --skills --locale ja      # エージェント用のスキルを置く
 ```
 
-`jany --init` は 3 つのことをする: ラッパー関数を出力する、組み込みの定義(`find`、`curl`、`docker run`)を `~/.config/jany/cmd/` に置く、`/jany-register` と `/jany-update` のスキルを `~/.agents/skills/` に置く(`~/.claude/skills/` と `~/.codex/skills/` があればそこからリンクする)。すでにある定義は上書きしない。スキルは既定で英語版。日本語版は `--locale ja` で置く。`--init` はシェルを開くたびにスキルを書き直すので、フラグは rc の行に書いておく(上の例のように)。
+あとは Claude Code か Codex で `/jany-setup` を呼ぶ。どのシェルで使うかを聞いて、その rc に `jany --init` の行を書き、zsh なら `jany --on` にするかも聞く。
 
-zsh では、`jany <command> ` の後ろに、まだ言えることを薄く出す(定義の `[[placeholders]]`)。例: `jany find src ` → `<file|dir> <*.log> <older than N days> <delete|count>`。jev は呼ばない。`~/.config/jany/config.toml` に `[suggest] enabled = false` と書くと消える。`JANY_SUGGEST=0` / `1` はそのシェルだけ上書きする。bash と fish には無い。
-
-`~/.config/jany/config.toml` に `[cmd.<name>] autorun = true` を書くと、zsh のラッパーが行を入力行に置かずにそのまま実行する。ただし、全部の語が規則で決まり、定義が risk `"none"` を返したときだけ(jev 無し、`--` の後ろ無し、生の `-x` フラグ無し、preview / pipe 無し)。ほかに何も無い `jany <command> -- --help` / `-- --version` も実行する。`autorun_also = ["pnpm install"]` と書くと、その語で始まる行は定義が `"unsafe"` と言っても実行する(最終的な argv の先頭を語単位で比べるので、`pnpm add react` になる `jany pnpm install react` は当たらない。`"dangerous"` は常に実行しない)。行は stderr に出し、履歴にも残る。それ以外は今までどおり入力行に置く。既定は off。bash / fish は常に入力行。
-
-`jany --on`(zsh だけ)を打つと、`jany --off` までそのシェルでは `jany` を省ける。Enter を押したとき、定義のあるコマンドで始まり、その後に何か言っている行は jany を通る。`find empty folders` なら次のプロンプトに `find . -type d -empty` が載り、履歴に残るのは `jany find empty folders`。`-` で始まる語(`find . -name x`)、パイプ、リスト、リダイレクトを含む行は打ったとおりに走る。コマンド単体(`find`)や、jany に定義の無いサブコマンド(`docker ps`)も同じ。`command find …` や `\find …` は常に打ったとおり。`~/.config/jany/config.toml` に `[on] skip = ["kubectl", "docker compose"]` と書くと、その語で始まる行(語単位で比べる)は打ったとおりに走り、薄い候補も出ない。それ以外の行には薄い候補が出る。
-
-<p align="center">
-  <img src="docs/on.svg" alt="jany --on のときの流れ: jany を付けずに打った行で Enter → jany が引き受けるか(jany --claim、jev は呼ばない)。はい: 頭に jany を足し、履歴にはその行が残る → jany(規則 → jev → assemble)→ 入力行。autorun で安全なときはそのまま実行。いいえ(- で始まる語、パイプやリダイレクト、コマンド単体、定義が無い、先頭の語がクォートされている、[on] skip): 打ったとおりに走る。" width="880">
-</p>
-
-環境変数の `OPENROUTER_API_KEY` が優先される。`jind setup` や `jurl setup` で保存したキーも拾う。macOS の zsh で確認している。
+手で設定するとき、薄い候補・autorun・`jany --on`・API キーのことは [docs/setup.ja.md](docs/setup.ja.md) にある。
 
 ## 使い方
 
@@ -118,6 +103,7 @@ jany 自身の操作はフラグなので、`<command>` は常にツール名に
 | `jany --update` | jany を上げた後に: 手を入れていない組み込み定義を置き換え、他の定義に足りないものを一覧し、無いスキルを置く |
 | `/jany-update tar` | エージェントのスキルで、定義に足りないものだけを足す。既存の規則と cases はそのまま |
 | `jany --on` / `jany --off` | この zsh で、`jany` を付けずに `find empty folders` と打てる(ラッパーが要る) |
+| `jany --skills` | 最初の `--init` の前に、スキルだけを置く(次に `/jany-setup`) |
 | `jany --init zsh\|bash\|fish` | ラッパーと、組み込み定義とスキル(`--locale en\|ja`、既定は `en`) |
 | `jany --setup` | API キーを保存する |
 

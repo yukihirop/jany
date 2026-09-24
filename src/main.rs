@@ -29,9 +29,10 @@ jany — jev x any command. Turn loosely ordered words into a command line.
 usage: jany <command> [words ...] [flags] [-- passthrough args]
        jany --init <zsh|bash|fish> [--locale en|ja]
                                    print the shell wrapper (eval \"$(jany --init zsh)\");
-                                   also installs the /jany-register and /jany-update skills to ~/.agents/skills
+                                   also installs the /jany-setup, /jany-register and /jany-update skills to ~/.agents/skills
                                    (in English, or Japanese with --locale ja)
                                    and the built-in commands (find, curl, docker run) to ~/.config/jany/cmd
+       jany --skills [--locale en|ja]  only install the skills (before the first --init: then /jany-setup)
        jany --register <name> [sub] [--locale en|ja]
                                    scaffold ~/.config/jany/cmd/<name>/ (then: /jany-register <name>)
        jany --update [name] [sub] [--locale en|ja]
@@ -85,7 +86,7 @@ struct Opts {
     hint: bool,
     /// Language of the skill and scaffold for --init / --register.
     locale: Option<skill::Locale>,
-    /// jany's own action (--init / --register / --update / --test / --setup / --list). It is a flag so that <command> is always the tool's name.
+    /// jany's own action (--init / --skills / --register / --update / --test / --setup / --list). It is a flag so that <command> is always the tool's name.
     action: Option<String>,
 }
 
@@ -150,7 +151,7 @@ fn run(args: Vec<String>) -> Result<i32, JanyError> {
                 opts.locale = Some(skill::Locale::parse(&v)?);
             }
             s if s.starts_with("--locale=") => opts.locale = Some(skill::Locale::parse(&s["--locale=".len()..])?),
-            "--init" | "--register" | "--update" | "--test" | "--setup" | "--list" => {
+            "--init" | "--skills" | "--register" | "--update" | "--test" | "--setup" | "--list" => {
                 if let Some(prev) = &opts.action {
                     return Err(JanyError::Usage(format!("{prev} and {a} together")));
                 }
@@ -174,8 +175,8 @@ fn run(args: Vec<String>) -> Result<i32, JanyError> {
         output::stdout(HELP);
         return Ok(0);
     }
-    if opts.locale.is_some() && !matches!(opts.action.as_deref(), Some("--init" | "--register" | "--update")) {
-        return Err(JanyError::Usage("--locale only works with --init, --register or --update".into()));
+    if opts.locale.is_some() && !matches!(opts.action.as_deref(), Some("--init" | "--skills" | "--register" | "--update")) {
+        return Err(JanyError::Usage("--locale only works with --init, --skills, --register or --update".into()));
     }
     let locale = opts.locale.unwrap_or_default();
     let cmd_dir = config::cmd_dir().ok_or_else(|| JanyError::Config("cannot determine command dir (HOME unset)".into()))?;
@@ -203,6 +204,14 @@ fn run(args: Vec<String>) -> Result<i32, JanyError> {
                 }
                 Err(e) => eprintln!("jany: could not install the built-in commands: {e}"),
             }
+            return Ok(0);
+        }
+        // Only the skills, so that /jany-setup can do the rest (the rc line, --init, --on).
+        "--skills" => {
+            for c in skill::install(locale)? {
+                eprintln!("jany: installed {c}");
+            }
+            eprintln!("jany: next, in Claude Code or Codex: /jany-setup");
             return Ok(0);
         }
         "--register" => return skill::register(&cmd_dir, &words, locale),

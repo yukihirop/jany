@@ -11,6 +11,7 @@ const ACTIONS: &[(&str, &str)] = &[
         "--init",
         "print the shell wrapper (and install built-ins + skill)",
     ),
+    ("--skills", "install only the agent skills (then /jany-setup)"),
     ("--list", "show the command definitions found"),
     ("--test", "run a definition's cases.toml"),
     ("--register", "scaffold a new command definition"),
