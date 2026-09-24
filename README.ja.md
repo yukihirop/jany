@@ -25,6 +25,8 @@
   <img src="docs/demo.svg" alt="ターミナルのデモ: 'find log files older than 7 days in logs delete --explain' で語ごとの表と削除対象の read-only プレビューが出て、find が次のプロンプトに載る。'curl psot localhsot 3000 users first_name amanda' が JSON ボディ付きの POST になる。'docker run nginx 8080:80 background named web'。'tar extrct app.tar.gz into dist strip 1' はまずアーカイブの中身を一覧する" width="930">
 </p>
 
+デモの最後の行は出力ではない。入力済みの次のプロンプトだ。読んで、必要なら直して、Enter は自分で押す。
+
 ## はじめ方
 
 | | |
