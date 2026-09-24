@@ -25,6 +25,8 @@
   <img src="docs/demo.svg" alt="Terminal demo: 'find log files older than 7 days in logs delete --explain' showing the per-word table, the read-only preview of what would be deleted, then the find landing on the next prompt; 'curl psot localhsot 3000 users first_name amanda' becoming a POST with a JSON body; 'docker run nginx 8080:80 background named web'; 'tar extrct app.tar.gz into dist strip 1' listing the archive first" width="930">
 </p>
 
+The last line in the demo is not output: it is your next prompt, already filled in. Read it, edit it if you like, and press Enter yourself.
+
 ## Get started
 
 | | |
